@@ -80,7 +80,7 @@ A aplicação ficará disponível em `http://localhost:8080`.
 
 | Nome completo | E-mail da school |
 |---|---|
-| Renato Santos Chong | chongrenato@gmail.com |
+| Renato Santos Chong | rsc3@cesar.school |
 | _(preencher)_ | _(preencher)_ |
 | _(preencher)_ | _(preencher)_ |
 | _(preencher)_ | _(preencher)_ |
