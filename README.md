@@ -87,6 +87,7 @@ A aplicação ficará disponível em `http://localhost:8080`.
 | Guilherme Alves de Souza | gas6@cesar.school |
 | Maria Eduarda Vasconcelos | _(falta e-mail da school)_ |
 | Victor Barros Roma | vbr@cesar.school |
+| Lucas Ferreira Torres de Albuquerque | lfta@cesar.school |
 
 ## Membros anteriores / novos
 
