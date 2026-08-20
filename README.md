@@ -81,12 +81,12 @@ A aplicação ficará disponível em `http://localhost:8080`.
 | Nome completo | E-mail da school |
 |---|---|
 | Renato Santos Chong | rsc3@cesar.school |
-| Cauã Rego Tavares Leite Duarte | _(falta e-mail da school)_ |
+| Cauã Rego Tavares Leite Duarte | crtld@cesar.school |
 | Fernando Andrade Leandro Peixoto | falp2@cesar.school |
-| Gabriel Brito Ferreira Dias | _(falta e-mail da school)_ |
+| Gabriel Brito Ferreira Dias | gbfd@cesar.school |
 | Guilherme Alves de Souza | gas6@cesar.school |
 | Lucas Ferreira Torres de Albuquerque | lfta@cesar.school |
-| Maria Eduarda Vasconcelos | _(falta e-mail da school)_ |
+| Maria Eduarda Vasconcelos | mevs@cesar.school |
 | Victor Barros Roma | vbr@cesar.school |
 
 
