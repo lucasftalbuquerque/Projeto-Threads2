@@ -85,9 +85,10 @@ A aplicação ficará disponível em `http://localhost:8080`.
 | Fernando Andrade Leandro Peixoto | falp2@cesar.school |
 | Gabriel Brito Ferreira Dias | _(falta e-mail da school)_ |
 | Guilherme Alves de Souza | gas6@cesar.school |
+| Lucas Ferreira Torres de Albuquerque | lfta@cesar.school |
 | Maria Eduarda Vasconcelos | _(falta e-mail da school)_ |
 | Victor Barros Roma | vbr@cesar.school |
-| Lucas Ferreira Torres de Albuquerque | lfta@cesar.school |
+
 
 ## Membros anteriores / novos
 
