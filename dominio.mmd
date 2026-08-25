@@ -1,0 +1,136 @@
+classDiagram
+    direction TB
+
+    class Local {
+        <<abstract>>
+        -String id
+        -String nome
+        -String telefone
+    }
+
+    class Endereco {
+        -String logradouro
+        -String numero
+        -String bairro
+        -String cidade
+        -String estado
+        -String cep
+        -double latitude
+        -double longitude
+    }
+
+    class Hemocentro {
+        -String cnpj
+        +adicionarBolsa(Bolsa)
+        +removerBolsa(Bolsa)
+    }
+
+    class Hospital {
+        -String cnes
+        +adicionarRequisicao(Requisicao)
+    }
+
+    class Bolsa {
+        -String codigoRastreio
+        -TipoHemocomponente tipo
+        -GrupoSanguineo grupoSanguineo
+        -LocalDate dataColeta
+        -LocalDate dataValidade
+        -StatusBolsa status
+        +boolean estaVencida(LocalDate)
+    }
+
+    class Alocacao {
+        -String id
+        -LocalDateTime dataHoraAlocacao
+    }
+
+    class Requisicao {
+        -String id
+        -LocalDateTime dataHoraCriacao
+        -LocalDateTime prazoEntrega
+        -StatusRequisicao status
+        +adicionarItem(ItemRequisicao)
+        +boolean estaCompleta()
+    }
+
+    class ItemRequisicao {
+        -String id
+        -TipoHemocomponente tipo
+        -GrupoSanguineo grupoSanguineo
+        -int quantidadeSolicitada
+        -int quantidadeAlocada
+        +void incrementarAlocada()
+        +boolean estaAtendido()
+        +int quantidadePendente()
+    }
+
+    class Rota {
+        -String id
+        -LocalDateTime dataHoraSaida
+        -LocalDateTime dataHoraChegadaPrevista
+        -StatusRota status
+    }
+
+    class GrupoSanguineo {
+        <<enumeration>>
+        A_POS
+        A_NEG
+        B_POS
+        B_NEG
+        AB_POS
+        AB_NEG
+        O_POS
+        O_NEG
+    }
+
+    class TipoHemocomponente {
+        <<enumeration>>
+        CONCENTRADO_HEMACIAS
+        PLASMA_FRESCO_CONGELADO
+        CONCENTRADO_PLAQUETAS
+        CRIOPRECIPITADO
+        +boolean temperaturaAdequada(double)
+    }
+
+    class StatusBolsa {
+        <<enumeration>>
+        DISPONIVEL
+        RESERVADA
+        EM_TRANSITO
+        ENTREGUE
+        VENCIDA
+        DESCARTADA
+    }
+
+    class StatusRequisicao {
+        <<enumeration>>
+        PENDENTE
+        EM_ATENDIMENTO
+        ATENDIDA
+        CANCELADA
+    }
+
+    class StatusRota {
+        <<enumeration>>
+        PLANEJADA
+        EM_ANDAMENTO
+        CONCLUIDA
+        CANCELADA
+    }
+
+    Local <|-- Hemocentro
+    Local <|-- Hospital
+    Local "1" *-- "1" Endereco
+
+    Hemocentro "1" o-- "0..*" Bolsa
+    Hospital "1" --> "0..*" Requisicao
+
+    Requisicao "1" *-- "1..*" ItemRequisicao
+
+    Bolsa "1" -- "0..1" Alocacao
+    ItemRequisicao "1" -- "0..*" Alocacao
+
+    Rota "0..*" --> "1" Hemocentro
+    Rota "0..*" --> "1" Hospital
+    Rota "1" o-- "0..*" Bolsa
