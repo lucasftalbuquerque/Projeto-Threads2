@@ -1,5 +1,7 @@
 package com.rotavital.dominio;
 
+import java.util.Objects;
+
 public abstract class Local {
 
     private final String id;
@@ -22,6 +24,19 @@ public abstract class Local {
     public void setNome(String nome)           { this.nome = nome; }
     public void setTelefone(String telefone)   { this.telefone = telefone; }
     public void setEndereco(Endereco endereco) { this.endereco = endereco; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Local)) return false;
+        Local local = (Local) o;
+        return Objects.equals(id, local.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 
     @Override
     public String toString() {

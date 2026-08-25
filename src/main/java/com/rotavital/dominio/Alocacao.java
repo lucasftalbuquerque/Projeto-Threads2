@@ -1,6 +1,7 @@
 package com.rotavital.dominio;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 public class Alocacao {
 
@@ -21,6 +22,19 @@ public class Alocacao {
     public Bolsa getBolsa()                    { return bolsa; }
     public ItemRequisicao getItemRequisicao()  { return itemRequisicao; }
     public LocalDateTime getDataHoraAlocacao() { return dataHoraAlocacao; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Alocacao)) return false;
+        Alocacao alocacao = (Alocacao) o;
+        return Objects.equals(id, alocacao.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 
     @Override
     public String toString() {

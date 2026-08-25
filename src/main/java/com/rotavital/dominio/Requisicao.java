@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class Requisicao {
 
@@ -45,5 +46,18 @@ public class Requisicao {
 
     public boolean estaCompleta() {
         return !itens.isEmpty() && itens.stream().allMatch(ItemRequisicao::estaAtendido);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Requisicao)) return false;
+        Requisicao requisicao = (Requisicao) o;
+        return Objects.equals(id, requisicao.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

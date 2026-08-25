@@ -3,6 +3,8 @@ package com.rotavital.dominio;
 import com.rotavital.dominio.enums.GrupoSanguineo;
 import com.rotavital.dominio.enums.TipoHemocomponente;
 
+import java.util.Objects;
+
 public class ItemRequisicao {
 
     private final String id;
@@ -36,5 +38,18 @@ public class ItemRequisicao {
 
     public int quantidadePendente() {
         return quantidadeSolicitada - quantidadeAlocada;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ItemRequisicao)) return false;
+        ItemRequisicao item = (ItemRequisicao) o;
+        return Objects.equals(id, item.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

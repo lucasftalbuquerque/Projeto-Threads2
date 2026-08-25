@@ -5,6 +5,7 @@ import com.rotavital.dominio.enums.StatusBolsa;
 import com.rotavital.dominio.enums.TipoHemocomponente;
 
 import java.time.LocalDate;
+import java.util.Objects;
 
 public class Bolsa {
 
@@ -40,6 +41,19 @@ public class Bolsa {
 
     public boolean estaVencida(LocalDate dataReferencia) {
         return dataReferencia.isAfter(dataValidade);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Bolsa)) return false;
+        Bolsa bolsa = (Bolsa) o;
+        return Objects.equals(codigoRastreio, bolsa.codigoRastreio);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(codigoRastreio);
     }
 
     @Override
