@@ -1,5 +1,6 @@
 package com.rotavital.dominio;
 
+import com.rotavital.dominio.enums.PrioridadeRequisicao;
 import com.rotavital.dominio.enums.StatusRequisicao;
 
 import java.time.LocalDateTime;
@@ -12,15 +13,17 @@ public class Requisicao {
 
     private final String id;
     private final Hospital hospital;
+    private final PrioridadeRequisicao prioridade;
     private final LocalDateTime dataHoraCriacao;
     private LocalDateTime prazoEntrega;
     private StatusRequisicao status;
     private final List<ItemRequisicao> itens;
 
-    public Requisicao(String id, Hospital hospital,
+    public Requisicao(String id, Hospital hospital, PrioridadeRequisicao prioridade,
                       LocalDateTime dataHoraCriacao, LocalDateTime prazoEntrega) {
         this.id = id;
         this.hospital = hospital;
+        this.prioridade = prioridade;
         this.dataHoraCriacao = dataHoraCriacao;
         this.prazoEntrega = prazoEntrega;
         this.status = StatusRequisicao.PENDENTE;
@@ -29,6 +32,7 @@ public class Requisicao {
 
     public String getId()                     { return id; }
     public Hospital getHospital()             { return hospital; }
+    public PrioridadeRequisicao getPrioridade() { return prioridade; }
     public LocalDateTime getDataHoraCriacao() { return dataHoraCriacao; }
     public LocalDateTime getPrazoEntrega()    { return prazoEntrega; }
     public StatusRequisicao getStatus()       { return status; }

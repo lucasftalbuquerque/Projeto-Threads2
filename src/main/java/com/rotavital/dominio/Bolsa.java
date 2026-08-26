@@ -12,17 +12,19 @@ public class Bolsa {
     private final String codigoRastreio;
     private final TipoHemocomponente tipo;
     private final GrupoSanguineo grupoSanguineo;
+    private final int volumeMl;
     private final LocalDate dataColeta;
     private final LocalDate dataValidade;
     private final Hemocentro hemocentroOrigem;
     private StatusBolsa status;
 
     public Bolsa(String codigoRastreio, TipoHemocomponente tipo,
-                 GrupoSanguineo grupoSanguineo, LocalDate dataColeta,
-                 Hemocentro hemocentroOrigem) {
+                 GrupoSanguineo grupoSanguineo, int volumeMl,
+                 LocalDate dataColeta, Hemocentro hemocentroOrigem) {
         this.codigoRastreio = codigoRastreio;
         this.tipo = tipo;
         this.grupoSanguineo = grupoSanguineo;
+        this.volumeMl = volumeMl;
         this.dataColeta = dataColeta;
         this.dataValidade = dataColeta.plusDays(tipo.getValidadeDias());
         this.hemocentroOrigem = hemocentroOrigem;
@@ -32,6 +34,7 @@ public class Bolsa {
     public String getCodigoRastreio()         { return codigoRastreio; }
     public TipoHemocomponente getTipo()       { return tipo; }
     public GrupoSanguineo getGrupoSanguineo() { return grupoSanguineo; }
+    public int getVolumeMl()                  { return volumeMl; }
     public LocalDate getDataColeta()          { return dataColeta; }
     public LocalDate getDataValidade()        { return dataValidade; }
     public Hemocentro getHemocentroOrigem()   { return hemocentroOrigem; }

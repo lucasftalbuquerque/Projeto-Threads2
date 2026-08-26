@@ -25,12 +25,12 @@
 |---|---|---|---|
 | `id` | UUID | gerado pelo backend | — |
 | `hemocentroId` | UUID | sim | Hemocentro onde a bolsa está armazenada |
-| `tipoHemocomponente` | enum | sim | `SANGUE_TOTAL`, `CONCENTRADO_HEMACIAS`, `PLASMA`, `PLAQUETAS`, `CRIOPRECIPITADO` |
+| `tipoHemocomponente` | enum | sim | `CONCENTRADO_HEMACIAS`, `PLASMA_FRESCO_CONGELADO`, `CONCENTRADO_PLAQUETAS`, `CRIOPRECIPITADO` |
 | `grupoSanguineo` | string | sim | Notação ABO/Rh didática: `A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+`, `O-` |
 | `volumeMl` | integer | sim | Volume da bolsa em mililitros |
 | `dataColeta` | date | sim | Data da coleta |
 | `dataValidade` | date | sim | Data de validade (usada para priorização FEFO) |
-| `status` | enum | gerado pelo backend (`DISPONIVEL` na criação) | `DISPONIVEL`, `RESERVADA`, `ALOCADA`, `EM_TRANSITO`, `UTILIZADA`, `DESCARTADA` |
+| `status` | enum | gerado pelo backend (`DISPONIVEL` na criação) | `DISPONIVEL`, `RESERVADA`, `ALOCADA`, `EM_TRANSITO`, `ENTREGUE`, `DESCARTADA` |
 | `criadoEm` / `atualizadoEm` | date-time | gerado pelo backend | — |
 
 `BolsaResumo`: `id`, `tipoHemocomponente`, `grupoSanguineo`, `status`, `dataValidade`, `hemocentroId`.
@@ -46,7 +46,7 @@
 | `hospitalId` | UUID | sim | Hospital requisitante |
 | `prioridade` | enum | sim | `ROTINA`, `URGENTE`, `EMERGENCIA` |
 | `observacao` | string | não | Texto livre, opcional |
-| `status` | enum | gerado pelo backend (`ABERTA` na criação) | `ABERTA`, `PARCIALMENTE_ATENDIDA`, `ATENDIDA`, `CANCELADA` |
+| `status` | enum | gerado pelo backend (`PENDENTE` na criação) | `PENDENTE`, `PARCIALMENTE_ATENDIDA`, `ATENDIDA`, `CANCELADA` |
 | `itens` | array de `ItemRequisicao` | sim (mín. 1 item) | Ver abaixo |
 | `criadoEm` / `atualizadoEm` | date-time | gerado pelo backend | — |
 
@@ -77,7 +77,7 @@
 | `previsaoChegada` | date-time | sim | — |
 | `saidaReal` | date-time | não (preenchido em trânsito) | — |
 | `chegadaReal` | date-time | não (preenchido na conclusão) | — |
-| `status` | enum | gerado pelo backend (`PLANEJADA` na criação) | `PLANEJADA`, `EM_TRANSITO`, `CONCLUIDA`, `ATRASADA`, `CANCELADA` |
+| `status` | enum | gerado pelo backend (`PLANEJADA` na criação) | `PLANEJADA`, `EM_TRANSITO`, `CONCLUIDA`, `CANCELADA` |
 | `bolsas` | array de `BolsaResumo` | não (embarque via sub-recurso) | — |
 | `criadoEm` / `atualizadoEm` | date-time | gerado pelo backend | — |
 
@@ -230,7 +230,7 @@ Content-Type: application/json
   "observacao": "Paciente em cirurgia eletiva — dado fictício de exemplo",
   "itens": [
     { "tipoHemocomponente": "CONCENTRADO_HEMACIAS", "grupoSanguineo": "O-", "quantidadeSolicitada": 2 },
-    { "tipoHemocomponente": "PLASMA", "grupoSanguineo": "O-", "quantidadeSolicitada": 1 }
+    { "tipoHemocomponente": "PLASMA_FRESCO_CONGELADO", "grupoSanguineo": "O-", "quantidadeSolicitada": 1 }
   ]
 }
 ```
@@ -247,7 +247,7 @@ Content-Type: application/json
   "hospitalId": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
   "prioridade": "URGENTE",
   "observacao": "Paciente em cirurgia eletiva — dado fictício de exemplo",
-  "status": "ABERTA",
+  "status": "PENDENTE",
   "itens": [
     {
       "id": "aa11bb22-cc33-dd44-ee55-ff6677889900",
@@ -259,7 +259,7 @@ Content-Type: application/json
     },
     {
       "id": "bb22cc33-dd44-ee55-ff66-778899001122",
-      "tipoHemocomponente": "PLASMA",
+      "tipoHemocomponente": "PLASMA_FRESCO_CONGELADO",
       "grupoSanguineo": "O-",
       "quantidadeSolicitada": 1,
       "quantidadeAlocada": 0,

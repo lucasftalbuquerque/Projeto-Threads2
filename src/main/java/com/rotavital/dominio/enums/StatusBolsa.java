@@ -5,6 +5,5 @@ public enum StatusBolsa {
     RESERVADA,
     EM_TRANSITO,
     ENTREGUE,
-    VENCIDA,
     DESCARTADA
 }
