@@ -20,3 +20,8 @@ build/
 # SO
 .DS_Store
 Thumbs.db
+# Windows Explorer
+desktop.ini
+
+# Windows Explorer
+desktop.ini

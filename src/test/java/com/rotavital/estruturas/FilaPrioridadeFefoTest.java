@@ -71,6 +71,7 @@ class FilaPrioridadeFefoTest {
                 codigo,
                 TipoHemocomponente.CONCENTRADO_HEMACIAS,
                 GrupoSanguineo.O_POS,
+                450,
                 dataColeta,
                 hemocentro
         );
