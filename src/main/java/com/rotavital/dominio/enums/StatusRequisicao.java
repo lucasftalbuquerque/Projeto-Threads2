@@ -2,7 +2,7 @@ package com.rotavital.dominio.enums;
 
 public enum StatusRequisicao {
     PENDENTE,
-    EM_ATENDIMENTO,
+    PARCIALMENTE_ATENDIDA,
     ATENDIDA,
     CANCELADA
 }
