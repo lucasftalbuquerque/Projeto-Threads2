@@ -27,6 +27,11 @@ jobs:
           # cada build baixa tudo de novo e leva varios minutos.
           cache: maven
 
+      # O runner e Linux e o mvnw precisa do bit de execucao. Quem commita
+      # do Windows pode perde-lo sem perceber, entao garantimos aqui.
+      - name: Garantir permissao de execucao do mvnw
+        run: chmod +x ./mvnw
+
       - name: Compilar e rodar os testes
         run: ./mvnw --batch-mode clean verify
 
