@@ -1,0 +1,47 @@
+name: CI
+
+# Roda em push na main e em todo pull request que aponte para ela.
+# O gatilho de pull_request e o que impede que codigo quebrado entre na
+# main: o GitHub mostra o resultado no proprio PR antes do merge.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build e testes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          # Guarda as dependencias do Maven entre execucoes. Sem isso,
+          # cada build baixa tudo de novo e leva varios minutos.
+          cache: maven
+
+      # O runner e Linux e o mvnw precisa do bit de execucao. Quem commita
+      # do Windows pode perde-lo sem perceber, entao garantimos aqui.
+      - name: Garantir permissao de execucao do mvnw
+        run: chmod +x ./mvnw
+
+      - name: Compilar e rodar os testes
+        run: ./mvnw --batch-mode clean verify
+
+      - name: Publicar relatorio dos testes
+        # Roda mesmo quando os testes falham: e justamente quando o
+        # relatorio importa.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-testes
+          path: target/surefire-reports/
+          retention-days: 7
+          if-no-files-found: ignore
