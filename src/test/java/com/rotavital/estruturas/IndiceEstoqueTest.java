@@ -91,6 +91,7 @@ class IndiceEstoqueTest {
                 codigo,
                 tipo,
                 grupo,
+                450,
                 LocalDate.of(2026, 8, 1),
                 hemocentro
         );
