@@ -63,18 +63,73 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 
 ## Como rodar o projeto
 
-> Obrigatório a partir da segunda entrega. Preencher assim que o esqueleto Spring Boot existir.
+### Pré-requisitos
+
+- **JDK 21** (LTS). Confira com `java -version`.
+- Não é preciso instalar o Maven: o projeto usa o Maven Wrapper (`mvnw`), que
+  baixa a versão correta na primeira execução.
+
+### Executando
 
 ```bash
 # clonar o repositório
 git clone https://github.com/rsc3-pixel/Projeto3-2026.2.git
 cd Projeto3-2026.2
 
-# rodar a aplicação
-# ./mvnw spring-boot:run
+# Linux / macOS
+./mvnw spring-boot:run
+
+# Windows (PowerShell ou cmd)
+.\mvnw.cmd spring-boot:run
 ```
 
-A aplicação ficará disponível em `http://localhost:8080`.
+A primeira execução baixa as dependências e demora alguns minutos. As
+seguintes sobem em poucos segundos.
+
+A aplicação fica disponível em `http://localhost:8080`.
+
+### Endpoints disponíveis
+
+| URL | O que é |
+|---|---|
+| `http://localhost:8080/actuator/health` | Estado da aplicação (`{"status":"UP"}`) |
+| `http://localhost:8080/h2-console` | Console do banco H2 |
+
+Os endpoints de negócio (`/api/v1/...`) ainda não existem: são o CRUD da
+semana 06. O contrato deles está em [contrato_api.md](contrato_api.md).
+
+### Acessando o console do H2
+
+Em `http://localhost:8080/h2-console`, preencha:
+
+| Campo | Valor |
+|---|---|
+| JDBC URL | `jdbc:h2:mem:rotavital` |
+| User Name | `sa` |
+| Password | *(deixe em branco)* |
+
+O banco é **em memória**: os dados existem enquanto a aplicação estiver
+rodando e são perdidos ao parar. A migração para PostgreSQL está prevista para
+a Entrega 02 e exige apenas trocar a URL e o driver em
+`src/main/resources/application.properties`.
+
+### Outros comandos
+
+```bash
+./mvnw clean compile   # compila
+./mvnw test            # roda os testes
+./mvnw clean package   # gera o jar em target/
+```
+
+### Stack
+
+| Camada | Tecnologia |
+|---|---|
+| Linguagem | Java 21 |
+| Framework | Spring Boot 4.1.1 |
+| Build | Maven (via wrapper) |
+| Banco | H2 em memória (PostgreSQL previsto) |
+| Persistência | Spring Data JPA / Hibernate |
 
 ## Equipe
 
