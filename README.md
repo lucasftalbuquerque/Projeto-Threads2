@@ -173,4 +173,4 @@ a Entrega 02 e exige apenas trocar a URL e o driver em
 
 | Nome completo | E-mail da school | Entrada | Saída |
 |---|---|---|---|
-| Lucas Ferreira Torres de Albuquerque | lfta@cesar.school | 19/08/2026 | — |
+| _(nenhum até o momento)_ | | | |
