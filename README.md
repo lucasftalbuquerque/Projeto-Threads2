@@ -45,9 +45,24 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 
 ### Entrega 01
 
-- **Status:** em andamento
-- **Artefatos:** _(adicionar links)_
-- **Screenshots:** _(adicionar imagens)_
+**Status:** entregue em 31/08/2026
+
+**Artefatos**
+
+| Artefato | Link |
+|---|---|
+| Histórias de usuário com cenários BDD | [docs/historias-de-usuario.md](docs/historias-de-usuario.md) |
+| Protótipo Lo-Fi (Figma) | [abrir protótipo](https://www.figma.com/make/FjQBa3isHRI4lxbASP8AEn/Dark-Web-Blood-Bank-Prototype?p=f&t=b0uZNhfKp6MHIZBO-0&fullscreen=1) |
+| Screencast do protótipo | _(adicionar link do YouTube)_ |
+| Modelo de domínio (diagrama de classes) | [dominio.png](dominio.png) · [dominio.drawio](dominio.drawio) |
+| Contrato da API REST | [contrato_api.md](contrato_api.md) |
+| Arquitetura de rede | [diagrama_arquitetura_redes.png](diagrama_arquitetura_redes.png) |
+| Escopo do grafo de distribuição | [docs/escopo-grafo-rede-distribuicao.md](docs/escopo-grafo-rede-distribuicao.md) |
+| Estruturas de dados e complexidade | [docs/complexidade-estruturas.md](docs/complexidade-estruturas.md) |
+| Análise estatística (CRISP-DM) | [dados/crisp-dm-briefing.md](dados/crisp-dm-briefing.md) |
+| Apresentação do pitch | [apresentacao/pitch-crisp-dm.html](apresentacao/pitch-crisp-dm.html) |
+
+**Screenshots:** _(adicionar imagens do protótipo)_
 
 ### Entrega 02
 
