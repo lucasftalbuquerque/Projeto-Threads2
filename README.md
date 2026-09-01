@@ -63,8 +63,9 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 | Modelo de domínio (diagrama de classes) | [dominio.png](dominio.png) · [dominio.drawio](dominio.drawio) |
 | Contrato da API REST | [contrato_api.md](contrato_api.md) |
 | Arquitetura de rede | [diagrama_arquitetura_redes.png](diagrama_arquitetura_redes.png) |
-| Escopo do grafo de distribuição | [docs/escopo-grafo-rede-distribuicao.md](docs/escopo-grafo-rede-distribuicao.md) |
-| Estruturas de dados e complexidade | [docs/complexidade-estruturas.md](docs/complexidade-estruturas.md) |
+| Escopo do grafo de distribuição | [docs/escopo-grafo-rede-distribuicao.md](docs/escopo-grafo-rede-distribuicao.md) · [diagrama](docs/grafo-rede-distribuicao.png) |
+| Estruturas de dados (grafo, FEFO, índice) | [docs/W04-estruturas-base.md](docs/W04-estruturas-base.md) |
+| Complexidade das estruturas | [docs/complexidade-estruturas.md](docs/complexidade-estruturas.md) |
 | Análise estatística (CRISP-DM) | [dados/crisp-dm-briefing.md](dados/crisp-dm-briefing.md) |
 | Apresentação do pitch | [apresentacao/pitch-crisp-dm.html](apresentacao/pitch-crisp-dm.html) |
 
@@ -72,15 +73,27 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 
 ### Entrega 02
 
-- **Status:** não iniciada
-- **Artefatos:** _(adicionar links)_
-- **Screenshots:** _(adicionar imagens)_
+**Status:** não iniciada
+
+**Artefatos:** _(a preencher)_
+
+**Screenshots:** _(a preencher)_
 
 ### Entrega 03
 
-- **Status:** não iniciada
-- **Artefatos:** _(adicionar links)_
-- **Screenshots:** _(adicionar imagens)_
+**Status:** não iniciada
+
+**Artefatos:** _(a preencher)_
+
+**Screenshots:** _(a preencher)_
+
+### Entrega 04
+
+**Status:** não iniciada
+
+**Artefatos:** _(a preencher)_
+
+**Screenshots:** _(a preencher)_
 
 ## Como rodar o projeto
 
@@ -142,16 +155,6 @@ a Entrega 02 e exige apenas trocar a URL e o driver em
 ./mvnw clean package   # gera o jar em target/
 ```
 
-### Stack
-
-| Camada | Tecnologia |
-|---|---|
-| Linguagem | Java 21 |
-| Framework | Spring Boot 4.1.1 |
-| Build | Maven (via wrapper) |
-| Banco | H2 em memória (PostgreSQL previsto) |
-| Persistência | Spring Data JPA / Hibernate |
-
 ## Equipe
 
 | Nome completo | E-mail da school |
@@ -170,4 +173,4 @@ a Entrega 02 e exige apenas trocar a URL e o driver em
 
 | Nome completo | E-mail da school | Entrada | Saída |
 |---|---|---|---|
-| _(nenhum até o momento)_ | | | |
+| Lucas Ferreira Torres de Albuquerque | lfta@cesar.school | 19/08/2026 | — |
