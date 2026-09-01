@@ -34,11 +34,17 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 
 | Camada | Tecnologia |
 |---|---|
-| Linguagem | Java |
-| Framework web | Spring Boot |
-| Build | (a definir: Maven ou Gradle) |
-| Banco de dados | (a definir) |
-| Front-end | (a definir) |
+| Linguagem | Java 21 (LTS) |
+| Framework web | Spring Boot 4.1.1 |
+| Build | Maven, via wrapper (`mvnw`) |
+| Persistência | Spring Data JPA / Hibernate |
+| Banco de dados | H2 em memória (desenvolvimento) · PostgreSQL previsto para a Entrega 02 |
+| Front-end | React (a implementar) |
+| Testes | JUnit 5 |
+| Integração contínua | GitHub Actions |
+| Análise de dados | Python 3 (biblioteca padrão) |
+| Prototipação | Figma |
+| Diagramas | draw.io |
 | Controle de versão | Git / GitHub |
 
 ## Entregas
