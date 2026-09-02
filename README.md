@@ -59,7 +59,7 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 |---|---|
 | Histórias de usuário com cenários BDD | [docs/historias-de-usuario.md](docs/historias-de-usuario.md) |
 | Protótipo Lo-Fi (Figma) | [abrir protótipo](https://www.figma.com/make/FjQBa3isHRI4lxbASP8AEn/Dark-Web-Blood-Bank-Prototype?p=f&t=b0uZNhfKp6MHIZBO-0&fullscreen=1) |
-| Screencast do protótipo | https://youtu.be/33CGLaHzz9A |
+| Screencast do protótipo | [assistir no YouTube](https://youtu.be/33CGLaHzz9A) |
 | Modelo de domínio (diagrama de classes) | [dominio.png](dominio.png) · [dominio.drawio](dominio.drawio) |
 | Contrato da API REST | [contrato_api.md](contrato_api.md) |
 | Arquitetura de rede | [diagrama_arquitetura_redes.png](diagrama_arquitetura_redes.png) |
