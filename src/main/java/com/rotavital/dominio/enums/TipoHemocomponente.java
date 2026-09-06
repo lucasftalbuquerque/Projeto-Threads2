@@ -1,5 +1,7 @@
 package com.rotavital.dominio.enums;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum TipoHemocomponente {
 
     CONCENTRADO_HEMACIAS("Concentrado de Hemacias", 1.0, 6.0, 42),
@@ -26,6 +28,16 @@ public enum TipoHemocomponente {
 
     public boolean temperaturaAdequada(double tempLeitura) {
         return tempLeitura >= tempMinCelsius && tempLeitura <= tempMaxCelsius;
+    }
+
+    /**
+     * O contrato da API usa o nome da constante ({@code CONCENTRADO_HEMACIAS}), nao a
+     * descricao. Sem isto o Jackson seguiria o toString() abaixo, que existe
+     * para exibicao, e o JSON sairia com texto legivel em vez do enum.
+     */
+    @JsonValue
+    public String comoJson() {
+        return name();
     }
 
     @Override

@@ -1,13 +1,27 @@
 package com.rotavital.dominio;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.Embedded;
 
 import java.util.Objects;
 
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class Local {
 
-    private final String id;
+    @Id
+    private String id;
     private String nome;
     private String telefone;
+    
+    @Embedded
     private Endereco endereco;
+
+    protected Local() {
+        // Construtor sem argumentos exigido pelo JPA. Nao usar no codigo.
+    }
 
     protected Local(String id, String nome, String telefone, Endereco endereco) {
         this.id = id;

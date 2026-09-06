@@ -1,15 +1,30 @@
 package com.rotavital.dominio;
 
+import jakarta.persistence.Embeddable;
+
+/**
+ * Endereco de uma unidade da rede.
+ *
+ * <p>E um objeto de valor, nao uma entidade: nao tem identidade propria e so
+ * existe como parte de um Local. Por isso {@code @Embeddable}, que faz as
+ * colunas serem gravadas dentro da tabela da propria unidade em vez de criar
+ * uma tabela separada com chave estrangeira.</p>
+ */
+@Embeddable
 public class Endereco {
 
-    private final String logradouro;
-    private final String numero;
-    private final String bairro;
-    private final String cidade;
-    private final String estado;
-    private final String cep;
-    private final double latitude;
-    private final double longitude;
+    private String logradouro;
+    private String numero;
+    private String bairro;
+    private String cidade;
+    private String estado;
+    private String cep;
+    private double latitude;
+    private double longitude;
+
+    protected Endereco() {
+        // Construtor sem argumentos exigido pelo JPA. Nao usar no codigo.
+    }
 
     public Endereco(String logradouro, String numero, String bairro,
                     String cidade, String estado, String cep,

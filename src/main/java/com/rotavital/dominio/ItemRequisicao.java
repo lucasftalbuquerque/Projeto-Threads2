@@ -2,16 +2,45 @@ package com.rotavital.dominio;
 
 import com.rotavital.dominio.enums.GrupoSanguineo;
 import com.rotavital.dominio.enums.TipoHemocomponente;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
+@Entity
 public class ItemRequisicao {
 
-    private final String id;
-    private final TipoHemocomponente tipo;
-    private final GrupoSanguineo grupoSanguineo;
-    private final int quantidadeSolicitada;
+    @Id
+    private String id;
+
+    @ManyToOne
+    @JoinColumn(name = "requisicao_id")
+    private Requisicao requisicao;
+
+    @Enumerated(EnumType.STRING)
+    private TipoHemocomponente tipo;
+
+    @Enumerated(EnumType.STRING)
+    private GrupoSanguineo grupoSanguineo;
+
+    private int quantidadeSolicitada;
     private int quantidadeAlocada;
+
+    @OneToMany(mappedBy = "itemRequisicao", cascade = CascadeType.ALL, orphanRemoval = true)
+    private final List<Alocacao> alocacoes = new ArrayList<>();
+
+    protected ItemRequisicao() {
+        // Construtor sem argumentos exigido pelo JPA. Nao usar no codigo.
+    }
 
     public ItemRequisicao(String id, TipoHemocomponente tipo,
                           GrupoSanguineo grupoSanguineo, int quantidadeSolicitada) {
@@ -23,13 +52,29 @@ public class ItemRequisicao {
     }
 
     public String getId()                     { return id; }
+    public Requisicao getRequisicao()         { return requisicao; }
     public TipoHemocomponente getTipo()       { return tipo; }
     public GrupoSanguineo getGrupoSanguineo() { return grupoSanguineo; }
     public int getQuantidadeSolicitada()      { return quantidadeSolicitada; }
     public int getQuantidadeAlocada()         { return quantidadeAlocada; }
 
-    public void incrementarAlocada() {
-        this.quantidadeAlocada++;
+    void setRequisicao(Requisicao requisicao) { this.requisicao = requisicao; }
+
+    public List<Alocacao> getAlocacoes() {
+        return Collections.unmodifiableList(alocacoes);
+    }
+
+    public void adicionarAlocacao(Alocacao alocacao) {
+        alocacoes.add(alocacao);
+        quantidadeAlocada++;
+    }
+
+    public boolean removerAlocacao(Alocacao alocacao) {
+        boolean removeu = alocacoes.remove(alocacao);
+        if (removeu) {
+            quantidadeAlocada--;
+        }
+        return removeu;
     }
 
     public boolean estaAtendido() {

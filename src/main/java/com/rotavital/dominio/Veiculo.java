@@ -1,12 +1,21 @@
 package com.rotavital.dominio;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+
+@Entity
 public class Veiculo {
 
-    private final String id;
+    @Id
+    private String id;
     private String placa;
     private String modelo;
     private int capacidadeMaxima;
     private boolean disponivel;
+
+    protected Veiculo() {
+        // Construtor sem argumentos exigido pelo JPA. Nao usar no codigo.
+    }
 
     public Veiculo(String id, String placa, String modelo, int capacidadeMaxima) {
         this.id = id;
