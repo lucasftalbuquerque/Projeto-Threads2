@@ -129,8 +129,24 @@ A aplicação fica disponível em `http://localhost:8080`.
 | `http://localhost:8080/actuator/health` | Estado da aplicação (`{"status":"UP"}`) |
 | `http://localhost:8080/h2-console` | Console do banco H2 |
 
-Os endpoints de negócio (`/api/v1/...`) ainda não existem: são o CRUD da
-semana 06. O contrato deles está em [contrato_api.md](contrato_api.md).
+Os endpoints de negócio seguem o [contrato_api.md](contrato_api.md):
+
+| Recurso | Operações |
+|---|---|
+| `/api/v1/hemocentros` | GET, POST, PUT, DELETE; sub-recursos `/bolsas` e `/rotas` |
+| `/api/v1/hospitais` | GET, POST, PUT, DELETE; sub-recurso `/requisicoes` |
+| `/api/v1/bolsas` | GET, POST, PATCH (status), DELETE |
+| `/api/v1/requisicoes` | GET, POST, PATCH (cancelamento); sub-recursos `/itens` e `/itens/{id}/alocacoes` |
+| `/api/v1/rotas` | GET, POST, PATCH (status); sub-recurso `/bolsas` (embarque) |
+
+Ao subir, a aplicação carrega dados sintéticos (4 hemocentros, 6 hospitais,
+100 bolsas e requisições) para que a API já responda com conteúdo. A carga
+está em `CargaInicial.java` e não roda no perfil de teste.
+
+**Códigos de resposta:** 200/201/204 no caminho feliz, 400 para corpo
+inválido (com os campos apontados), 404 para recurso inexistente e 409 quando
+a operação fere uma regra de negócio (bolsa incompatível, transição de status
+proibida, remoção de unidade com vínculos).
 
 ### Acessando o console do H2
 

@@ -3,20 +3,42 @@ package com.rotavital.dominio;
 import com.rotavital.dominio.enums.GrupoSanguineo;
 import com.rotavital.dominio.enums.StatusBolsa;
 import com.rotavital.dominio.enums.TipoHemocomponente;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 
 import java.time.LocalDate;
 import java.util.Objects;
 
+@Entity
 public class Bolsa {
 
-    private final String codigoRastreio;
-    private final TipoHemocomponente tipo;
-    private final GrupoSanguineo grupoSanguineo;
-    private final int volumeMl;
-    private final LocalDate dataColeta;
-    private final LocalDate dataValidade;
-    private final Hemocentro hemocentroOrigem;
+    @Id
+    private String codigoRastreio;
+
+    @Enumerated(EnumType.STRING)
+    private TipoHemocomponente tipo;
+
+    @Enumerated(EnumType.STRING)
+    private GrupoSanguineo grupoSanguineo;
+
+    private int volumeMl;
+    private LocalDate dataColeta;
+    private LocalDate dataValidade;
+
+    @ManyToOne
+    @JoinColumn(name = "hemocentro_origem_id")
+    private Hemocentro hemocentroOrigem;
+
+    @Enumerated(EnumType.STRING)
     private StatusBolsa status;
+
+    protected Bolsa() {
+        // Construtor sem argumentos exigido pelo JPA. Nao usar no codigo.
+    }
 
     public Bolsa(String codigoRastreio, TipoHemocomponente tipo,
                  GrupoSanguineo grupoSanguineo, int volumeMl,

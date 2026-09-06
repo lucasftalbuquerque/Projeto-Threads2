@@ -1,14 +1,33 @@
 package com.rotavital.dominio;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+@Entity
 public class Alocacao {
 
-    private final String id;
-    private final Bolsa bolsa;
-    private final ItemRequisicao itemRequisicao;
-    private final LocalDateTime dataHoraAlocacao;
+    @Id
+    private String id;
+
+    @OneToOne
+    @JoinColumn(name = "bolsa_id")
+    private Bolsa bolsa;
+
+    @ManyToOne
+    @JoinColumn(name = "item_requisicao_id")
+    private ItemRequisicao itemRequisicao;
+
+    private LocalDateTime dataHoraAlocacao;
+
+    protected Alocacao() {
+        // Construtor sem argumentos exigido pelo JPA. Nao usar no codigo.
+    }
 
     public Alocacao(String id, Bolsa bolsa, ItemRequisicao itemRequisicao,
                     LocalDateTime dataHoraAlocacao) {

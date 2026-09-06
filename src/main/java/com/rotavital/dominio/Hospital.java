@@ -1,18 +1,27 @@
 package com.rotavital.dominio;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@Entity
 public class Hospital extends Local {
 
     private String cnes;
-    private final List<Requisicao> requisicoes;
+
+    @OneToMany(mappedBy = "hospital")
+    private final List<Requisicao> requisicoes = new ArrayList<>();
+
+    protected Hospital() {
+        // Construtor sem argumentos exigido pelo JPA. Nao usar no codigo.
+    }
 
     public Hospital(String id, String nome, String telefone, Endereco endereco, String cnes) {
         super(id, nome, telefone, endereco);
         this.cnes = cnes;
-        this.requisicoes = new ArrayList<>();
     }
 
     public String getCnes() { return cnes; }
