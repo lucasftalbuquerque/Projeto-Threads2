@@ -73,9 +73,13 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 
 ### Entrega 02
 
-**Status:** não iniciada
+**Status:** em andamento
 
-**Artefatos:** _(a preencher)_
+**Artefatos**
+
+| Artefato | Link |
+|---|---|
+| Guia do CRUD (decisões de JPA e arquitetura) | [docs/entendendo-o-crud.md](docs/entendendo-o-crud.md) |
 
 **Screenshots:** _(a preencher)_
 
