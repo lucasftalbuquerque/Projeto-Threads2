@@ -191,7 +191,7 @@ Deve devolver o IP da VM. Se vier vazio, espere um minuto e tente de novo.
 ### 1.4 Configurar o Nginx
 
 ```bash
-sudo cp ~/rota-vital-repo/infra/nginx-rota-vital.conf         /etc/nginx/sites-available/rota-vital
+sudo cp ~/rota-vital-repo/infra/nginx-rota-vital.conf /etc/nginx/sites-available/rota-vital
 sudo ln -s /etc/nginx/sites-available/rota-vital /etc/nginx/sites-enabled/
 ```
 
