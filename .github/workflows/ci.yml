@@ -22,6 +22,11 @@ concurrency:
 env:
   JAVA_VERSION: '21'
   JAVA_DISTRIBUICAO: 'temurin'
+  # A aplicacao escuta em 127.0.0.1:8081 e so e alcancavel pelo Nginx, que
+  # atende a porta 80 e encaminha este prefixo. Por isso as verificacoes
+  # abaixo batem na porta 80 com /rota-vital, nao na 8081 direto.
+  # Ver infra/nginx-rota-vital.conf e application-prod.properties.
+  CAMINHO_PUBLICO: '/rota-vital'
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -206,20 +211,27 @@ jobs:
             "${{ secrets.VM_USUARIO }}@${{ secrets.VM_HOST }}" \
             'sudo /opt/rota-vital/publicar.sh'
 
-      - name: Confirmar que a aplicacao respondeu
+      # Duas verificacoes em vez de uma, e a ordem importa: se ambas
+      # falhassem juntas, nao daria para saber se o problema e a aplicacao ou
+      # o proxy. Separadas, o job aponta a camada exata.
+      - name: Confirmar que a aplicacao subiu (dentro da VM)
         if: steps.segredos.outputs.configurado == 'true'
         run: |
-          # Enquanto a aplicacao sobe, o actuator responde 503 com
-          # status DOWN: o readiness ainda nao ficou pronto. Isso e normal,
-          # nao e falha, entao insistimos ate dar UP.
+          # A aplicacao escuta em 127.0.0.1:8081, entao esta checagem so
+          # funciona de dentro da maquina. Por isso o curl roda via ssh.
+          #
+          # Enquanto ela sobe, o actuator responde 503: o readiness ainda nao
+          # ficou pronto. Isso e normal, nao e falha, entao insistimos ate UP.
           #
           # A janela e de 3 minutos. Numa maquina de desenvolvimento a
-          # aplicacao sobe em ~12s, mas a e2-micro do free tier tem 1 GB de
-          # RAM e 2 vCPU compartilhadas: la o tempo e bem maior. Margem curta
-          # transformaria deploy lento em deploy vermelho.
+          # aplicacao sobe em ~12s, mas esta VM e compartilhada com outras
+          # aplicacoes e o tempo e maior. Margem curta transformaria deploy
+          # lento em deploy vermelho.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "${{ secrets.VM_USUARIO }}@${{ secrets.VM_HOST }}" bash -s <<'REMOTO'
           for tentativa in $(seq 1 36); do
             resposta=$(curl -sf --max-time 5 \
-              "http://${{ secrets.VM_HOST }}:8080/actuator/health" || true)
+              "http://127.0.0.1:8081/actuator/health" || true)
 
             if echo "$resposta" | grep -q '"status":"UP"'; then
               echo "Aplicacao no ar apos $((tentativa * 5))s: $resposta"
@@ -230,8 +242,28 @@ jobs:
             sleep 5
           done
 
-          echo "::error::A aplicacao nao respondeu UP em 3 minutos."
-          echo "::error::Verifique os logs na VM: sudo journalctl -u rota-vital -n 50"
+          echo "A aplicacao nao respondeu UP em 3 minutos."
+          echo "Ultimas linhas do log:"
+          sudo journalctl -u rota-vital -n 30 --no-pager || true
+          exit 1
+          REMOTO
+
+      - name: Confirmar que o Nginx esta encaminhando (pela URL publica)
+        if: steps.segredos.outputs.configurado == 'true'
+        run: |
+          # A aplicacao ja respondeu dentro da VM no passo anterior. Se esta
+          # verificacao falhar, o problema esta no proxy, nao na aplicacao.
+          resposta=$(curl -sf --max-time 10 \
+            "http://${{ secrets.VM_HOST }}${{ env.CAMINHO_PUBLICO }}/actuator/health" || true)
+
+          if echo "$resposta" | grep -q '"status":"UP"'; then
+            echo "Acessivel pela URL publica: $resposta"
+            exit 0
+          fi
+
+          echo "::error::A aplicacao subiu na VM, mas nao responde pela URL publica."
+          echo "::error::O encaminhamento do Nginx provavelmente nao esta configurado."
+          echo "::error::Ver a secao 'Configurar o Nginx' em docs/deploy.md."
           exit 1
 
       - name: Confirmar que o console do H2 esta inacessivel
@@ -241,7 +273,7 @@ jobs:
           # aqui confirmamos que a decisao chegou ate a maquina, em vez de
           # confiar que o arquivo certo foi carregado.
           codigo=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
-            "http://${{ secrets.VM_HOST }}:8080/h2-console" || echo "000")
+            "http://${{ secrets.VM_HOST }}${{ env.CAMINHO_PUBLICO }}/h2-console" || echo "000")
 
           if [ "$codigo" = "200" ]; then
             echo "::error::O console do H2 esta acessivel em producao."

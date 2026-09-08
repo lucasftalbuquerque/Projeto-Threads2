@@ -4,7 +4,58 @@ Como a aplicação sai do GitHub e chega no ar. Documento da PI3-21.
 
 ---
 
-## O pipeline em uma imagem
+## O cenário: uma VM compartilhada
+
+O Rota Vital **não tem uma máquina só para ele**. A VM (`flux`, em
+`us-west1-a`) já hospedava outra aplicação antes, e isso moldou quase todas as
+decisões deste documento.
+
+O que já existe lá:
+
+| Porta | Serviço |
+|---|---|
+| 80 | Nginx |
+| 3000 | Node (a outra aplicação) |
+| **8081** | **Rota Vital** (livre, escolhida por isso) |
+
+Três consequências:
+
+1. **A aplicação não usa a 8080.** É a porta padrão do Spring e a mais
+   disputada. Duas aplicações na mesma porta não convivem: a segunda a subir
+   falha com `Port already in use`.
+
+2. **A aplicação entra atrás do Nginx que já está lá.** Em vez de abrir mais
+   uma porta na internet, ela é servida em `/rota-vital/`. Nenhuma regra nova
+   de firewall, e o desenho fica igual ao
+   [diagrama de arquitetura do PI3-16](../diagrama_arquitetura_redes.png), que
+   já previa o Nginx como ponto único de entrada.
+
+3. **Nada do provisionamento toca no que já roda.** O script não para,
+   reinicia nem reconfigura serviço algum além do próprio, e confere se a
+   porta está livre antes de instalar qualquer coisa.
+
+```
+                 internet
+                     │  porta 80
+                     ▼
+              ┌─────────────┐
+              │    Nginx    │  já existia
+              └──┬───────┬──┘
+       /         │       │      /rota-vital/
+   (outra app)   │       │
+                 ▼       ▼
+          127.0.0.1:3000   127.0.0.1:8081
+             Node            Rota Vital (JVM)
+```
+
+A aplicação escuta em `127.0.0.1`, não em `0.0.0.0`. O sistema operacional
+recusa qualquer conexão vinda de fora da máquina: a única porta de entrada é
+o Nginx. Mesmo que a 8081 fosse aberta no firewall por engano, não haveria o
+que alcançar.
+
+---
+
+## O pipeline
 
 ```
    push na main
@@ -31,20 +82,28 @@ Como a aplicação sai do GitHub e chega no ar. Documento da PI3-21.
         │
         ├─ envia o jar por scp
         ├─ chama publicar.sh (troca o jar e reinicia)
-        ├─ confirma /actuator/health = UP
+        ├─ confirma health UP dentro da VM
+        ├─ confirma health UP pela URL pública
         └─ confirma /h2-console inacessível
 ```
 
 Cada etapa só começa se a anterior passou. Falha em qualquer ponto impede o
 deploy, que é o critério de aceite da story.
 
-**Por que quatro jobs e não um só?** Três motivos:
+**Por que quatro jobs e não um só?**
 
 1. **Erro aparece antes.** Erro de compilação quebra em segundos, sem esperar
-   a suite inteira de testes.
+   a suite inteira.
 2. **A aba Actions fica legível.** Você vê onde quebrou sem abrir o log.
-3. **O jar publicado é o mesmo que passou nos testes.** A etapa de deploy baixa
-   o artefato gerado no empacotamento, em vez de compilar de novo.
+3. **O jar publicado é o mesmo que passou nos testes.** O deploy baixa o
+   artefato do empacotamento, em vez de recompilar.
+
+**Por que duas verificações de health?** A primeira roda por SSH, dentro da
+VM, batendo em `127.0.0.1:8081`. A segunda vem de fora, pela URL pública.
+
+Se ambas falhassem juntas, não daria para saber se o problema é a aplicação
+ou o proxy. Separadas, o job aponta a camada exata: passou a primeira e
+falhou a segunda, o Nginx é que não está encaminhando.
 
 ---
 
@@ -52,61 +111,34 @@ deploy, que é o critério de aceite da story.
 
 Roda uma vez só.
 
-### 1.1 Criar a VM (se ainda não existir)
-
-No console do Google Cloud, **Compute Engine > Instâncias de VM > Criar**:
-
-| Campo | Valor |
-|---|---|
-| Nome | `rota-vital` |
-| Região | `southamerica-east1` (São Paulo) |
-| Tipo de máquina | `e2-micro` (elegível ao free tier) |
-| Disco de inicialização | Ubuntu 24.04 LTS, 20 GB |
-| Firewall | marque **Permitir tráfego HTTP** |
-
-> **Sobre o e2-micro:** 1 GB de RAM. É apertado para a JVM, e por isso o
-> serviço systemd limita o heap em 512 MB (`-Xmx512m`). Se a aplicação for
-> morta por falta de memória, o log do sistema mostra `Killed` ou `OOM`.
-
-### 1.2 Liberar a porta 8080
-
-A aplicação escuta na 8080, e o GCP bloqueia tudo que não for liberado
-explicitamente.
-
-**Console:** VPC network > Firewall > Criar regra de firewall
-
-| Campo | Valor |
-|---|---|
-| Nome | `permitir-8080` |
-| Direção | Entrada |
-| Destinos | Todas as instâncias na rede |
-| Intervalos de IP de origem | `0.0.0.0/0` |
-| Protocolos e portas | TCP, `8080` |
-
-**Ou pelo `gcloud`:**
+### 1.1 Conectar
 
 ```bash
-gcloud compute firewall-rules create permitir-8080 \
-  --allow=tcp:8080 \
-  --source-ranges=0.0.0.0/0 \
-  --description="Rota Vital - API"
+gcloud compute ssh flux --zone=us-west1-a
 ```
 
-> `0.0.0.0/0` significa "de qualquer lugar da internet". É o que a demonstração
-> exige. Em sistema real, você restringiria a origem e colocaria o Nginx na
-> frente, como prevê o [diagrama de arquitetura](../diagrama_arquitetura_redes.png).
-
-### 1.3 Rodar o provisionamento
-
-Conecte na VM por SSH e rode:
+### 1.2 Rodar o provisionamento
 
 ```bash
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/rsc3-pixel/Projeto3-2026.2/main/infra/provisionar.sh)"
 ```
 
-O script instala o Java 21, cria o usuário da aplicação, instala o serviço
-systemd e libera a regra de sudo do deploy. Rodar duas vezes não causa
-problema.
+O script começa mostrando memória e portas em uso, para você ver o cenário
+antes de qualquer alteração. Depois:
+
+- **confere se a 8081 está livre** e para com instrução clara se não estiver
+- instala o Java 21 (a VM não tinha Java)
+- cria o usuário `rotavital`, sem shell de login e sem home
+- registra o serviço systemd
+- libera o sudo apenas para o script de publicação
+
+Rodar duas vezes não causa problema.
+
+> **Sobre a memória.** O serviço limita o heap da JVM em 384 MB
+> (`-Xmx384m`). Sem limite, ela tentaria usar 1/4 da RAM total e poderia fazer
+> o kernel matar processo por falta de memória — e o processo morto poderia
+> ser o da outra aplicação. Se aparecer `OutOfMemoryError` no log, o valor
+> sobe; enquanto isso, o conservador protege o vizinho.
 
 Confira ao final:
 
@@ -115,12 +147,71 @@ java -version                          # deve mostrar 21
 sudo systemctl status rota-vital       # inativo, ainda sem jar
 ```
 
+### 1.3 Configurar o Nginx
+
+Este é o passo que faz a aplicação aparecer na internet. Ele **mexe na
+configuração que já serve a outra aplicação**, então vale ler antes de rodar.
+
+Copie o trecho de configuração:
+
+```bash
+sudo cp infra/nginx-rota-vital.conf /etc/nginx/snippets/rota-vital.conf
+```
+
+Descubra qual arquivo está servindo o site:
+
+```bash
+ls /etc/nginx/sites-enabled/
+```
+
+Abra esse arquivo e, **dentro do bloco `server { ... }`**, acrescente uma
+linha:
+
+```nginx
+server {
+    listen 80;
+    # ... o que já existe, sem alterar ...
+
+    include snippets/rota-vital.conf;    # <- só esta linha
+}
+```
+
+Valide **antes** de aplicar:
+
+```bash
+sudo nginx -t
+```
+
+`nginx -t` testa a configuração sem aplicá-la. Se houver erro de sintaxe, ele
+recusa e o Nginx atual continua servindo normalmente. **Nunca recarregue sem
+esse teste numa máquina com aplicação em produção.**
+
+Com o teste passando:
+
+```bash
+sudo systemctl reload nginx
+```
+
+`reload` relê a configuração sem derrubar conexões em andamento, diferente de
+`restart`. A outra aplicação não sente nada.
+
+> **Se algo der errado:** remova a linha `include`, rode `sudo nginx -t` e
+> `sudo systemctl reload nginx`. Tudo volta ao que era.
+
+### 1.4 Firewall
+
+**Nada a fazer.** A porta 80 já está aberta (é por ela que a outra aplicação
+responde), e a 8081 não precisa ser exposta — a aplicação só escuta em
+`localhost`.
+
+Essa é a vantagem de entrar atrás do Nginx: zero mudança de firewall.
+
 ---
 
 ## Parte 2: conectar o GitHub à VM
 
-O workflow precisa entrar na VM por SSH. Para isso, gera-se um par de chaves:
-a pública fica na VM, a privada vira segredo no GitHub.
+O workflow precisa entrar na VM por SSH. Gera-se um par de chaves: a pública
+fica na VM, a privada vira segredo no GitHub.
 
 ### 2.1 Gerar o par de chaves
 
@@ -139,6 +230,10 @@ Gera dois arquivos:
 
 > `-N ""` cria a chave sem senha. Uma automação não tem como digitar senha.
 > Por isso a chave privada precisa ficar em segredo: quem a tiver, entra na VM.
+
+**Use uma chave nova, dedicada ao deploy.** Não reaproveite a que você usa
+para entrar na máquina: se vazar, dá para revogar só ela, sem perder seu
+próprio acesso.
 
 ### 2.2 Instalar a chave pública na VM
 
@@ -168,7 +263,7 @@ No GitHub: **Settings > Secrets and variables > Actions > New repository secret*
 
 | Nome | Valor |
 |---|---|
-| `VM_HOST` | o IP externo da VM (ex.: `34.95.120.44`) |
+| `VM_HOST` | o IP externo da VM |
 | `VM_USUARIO` | seu usuário de SSH na VM |
 | `VM_CHAVE_SSH` | o conteúdo **inteiro** de `~/.ssh/rota_vital_deploy` |
 
@@ -182,18 +277,24 @@ cat ~/.ssh/rota_vital_deploy | clip
 cat ~/.ssh/rota_vital_deploy
 ```
 
-> Cole **tudo**, incluindo as linhas `-----BEGIN OPENSSH PRIVATE KEY-----` e
-> `-----END OPENSSH PRIVATE KEY-----`, e sem espaço sobrando no fim.
+> Cole **tudo**, incluindo `-----BEGIN OPENSSH PRIVATE KEY-----` e
+> `-----END OPENSSH PRIVATE KEY-----`, sem espaço sobrando no fim.
 
-**O IP externo da VM muda a cada reinício** se for efêmero. Para fixar:
-VPC network > Endereços IP > reserve o IP da instância como estático.
+Para descobrir o IP externo:
+
+```bash
+gcloud compute instances describe flux --zone=us-west1-a \
+  --format='get(networkInterfaces[0].accessConfigs[0].natIP)'
+```
+
+**O IP muda a cada reinício** se for efêmero. Para fixar: VPC network >
+Endereços IP > reserve o IP da instância como estático.
 
 ---
 
 ## Parte 3: publicar
 
-Com tudo configurado, o deploy é automático: qualquer push na `main` dispara
-o pipeline.
+Com tudo configurado, qualquer push na `main` dispara o pipeline.
 
 Para disparar sem commit novo: aba **Actions** > workflow **CI/CD** >
 **Run workflow**.
@@ -201,18 +302,21 @@ Para disparar sem commit novo: aba **Actions** > workflow **CI/CD** >
 ### Confirmar que funcionou
 
 ```bash
-curl http://IP_DA_VM:8080/actuator/health
+curl http://IP_DA_VM/rota-vital/actuator/health
 # {"status":"UP"}
 
-curl http://IP_DA_VM:8080/api/v1/hemocentros
+curl http://IP_DA_VM/rota-vital/api/v1/hemocentros
 # a lista de hemocentros da carga inicial
 
-curl -o /dev/null -w "%{http_code}\n" http://IP_DA_VM:8080/h2-console
+curl -o /dev/null -w "%{http_code}\n" http://IP_DA_VM/rota-vital/h2-console
 # 404 — precisa estar inacessível
 ```
 
-O próprio workflow já faz as três verificações. Se alguma falhar, o job de
-deploy fica vermelho.
+E confirme que a outra aplicação continua de pé:
+
+```bash
+curl -o /dev/null -w "%{http_code}\n" http://IP_DA_VM/
+```
 
 ---
 
@@ -220,37 +324,48 @@ deploy fica vermelho.
 
 ### O console do H2 desligado em produção
 
-É o critério de aceite mais importante da story, e vale entender o motivo.
+É o critério de aceite mais importante da story.
 
-O H2 console é uma página web com um terminal SQL. Em desenvolvimento, é
-prático. Exposto na internet, qualquer pessoa que acesse
-`http://seu-ip:8080/h2-console` pode ler, alterar e apagar qualquer dado,
-**sem senha** — porque o H2 em memória sobe com usuário `sa` e senha vazia.
+O H2 console é uma página web com um terminal SQL. Em desenvolvimento é
+prático. Exposto na internet, qualquer pessoa que o acesse pode ler, alterar e
+apagar qualquer dado, **sem senha** — porque o H2 em memória sobe com usuário
+`sa` e senha vazia.
 
-Onde está desligado: [`application-prod.properties`](../src/main/resources/application-prod.properties).
+Onde está desligado:
+[`application-prod.properties`](../src/main/resources/application-prod.properties).
 
 ```properties
 spring.h2.console.enabled=false
 ```
 
-Três camadas garantem que isso não se perca:
+**Quatro camadas** garantem que isso não se perca:
 
-1. O arquivo de perfil desliga
+1. o perfil de produção desliga
 2. `PerfilProducaoTest` quebra o build se alguém religar
-3. O workflow confere na URL pública depois do deploy
+3. o Nginx bloqueia o caminho explicitamente (`deny all`)
+4. o workflow confere na URL pública depois do deploy
 
-Uma linha num arquivo de configuração é fácil de reverter sem querer numa
-sessão de depuração. Por isso o teste e a verificação pós-deploy.
+Uma linha de configuração é fácil de reverter sem querer numa sessão de
+depuração. Por isso as outras três.
+
+### A aplicação não é alcançável de fora
+
+`server.address=127.0.0.1` faz o sistema operacional recusar conexões vindas
+de outra máquina. O único caminho até a aplicação é o Nginx, que decide o que
+passa.
 
 ### A aplicação não roda como root
 
 O serviço roda com o usuário `rotavital`, criado sem shell de login e sem
-diretório home. Se alguém explorar uma falha na aplicação, fica limitado ao
-que esse usuário pode fazer, que é quase nada.
+diretório home. Se alguém explorar uma falha, fica limitado ao que esse
+usuário pode fazer, que é quase nada.
 
-O systemd acrescenta restrições: `ProtectSystem=strict` (sistema de arquivos
-somente leitura, exceto `/opt/rota-vital`), `PrivateTmp=true` (`/tmp` isolado)
-e `NoNewPrivileges=true` (não consegue escalar privilégio).
+O systemd acrescenta: `ProtectSystem=strict` (sistema de arquivos somente
+leitura, exceto `/opt/rota-vital`), `PrivateTmp=true` (`/tmp` isolado) e
+`NoNewPrivileges=true`.
+
+Numa VM compartilhada isso importa em dobro: protege também a aplicação
+vizinha.
 
 ### Sudo restrito a um script
 
@@ -261,14 +376,14 @@ O usuário de deploy precisa reiniciar o serviço, o que exige root. Em vez de
 usuario ALL=(root) NOPASSWD: /opt/rota-vital/publicar.sh
 ```
 
-Se a chave SSH vazar, o atacante consegue publicar um jar, o que já é ruim,
-mas não vira root da máquina de imediato.
+Se a chave SSH vazar, o atacante consegue publicar um jar — já é ruim — mas
+não vira root da máquina, e não alcança a outra aplicação.
 
 ### Nenhum segredo no repositório
 
-IP, usuário e chave privada ficam em GitHub Secrets. O repositório não tem
-nenhum deles, e `PerfilProducaoTest.semSegredoVersionado` recusa qualquer
-propriedade de senha ou token que não venha de variável de ambiente.
+IP, usuário e chave privada ficam em GitHub Secrets.
+`PerfilProducaoTest.semSegredoVersionado` recusa qualquer propriedade de senha
+ou token que não venha de variável de ambiente.
 
 ---
 
@@ -277,7 +392,7 @@ propriedade de senha ou token que não venha de variável de ambiente.
 ### O job de deploy é pulado com aviso amarelo
 
 Falta cadastrar `VM_HOST`, `VM_USUARIO` ou `VM_CHAVE_SSH`. É o comportamento
-esperado enquanto a VM não está configurada — o pipeline segue verde de
+esperado enquanto a VM não está configurada: o pipeline segue verde de
 propósito, para o time não perder a referência de "verde = está tudo bem".
 
 ### `Permission denied (publickey)`
@@ -290,10 +405,22 @@ ssh -i ~/.ssh/rota_vital_deploy SEU_USUARIO@IP_DA_VM
 
 ### `Host key verification failed`
 
-O IP da VM mudou. Se for IP efêmero, reserve um estático e atualize o
-`VM_HOST`.
+O IP da VM mudou. Se for efêmero, reserve um estático e atualize `VM_HOST`.
 
-### A aplicação não responde `UP` em 60 segundos
+### Passou a verificação interna e falhou a pública
+
+A aplicação subiu, mas o Nginx não está encaminhando. Confira:
+
+```bash
+grep -r "rota-vital" /etc/nginx/sites-enabled/    # o include está lá?
+sudo nginx -t                                      # a config é válida?
+curl localhost:8081/actuator/health                # a app responde localmente?
+```
+
+O mais comum é ter esquecido o `include snippets/rota-vital.conf;` dentro do
+bloco `server`, ou tê-lo colocado fora dele.
+
+### A aplicação não responde `UP` em 3 minutos
 
 Entre na VM e leia o log:
 
@@ -302,20 +429,26 @@ sudo systemctl status rota-vital
 sudo journalctl -u rota-vital -n 50 --no-pager
 ```
 
-Causas comuns:
-
 | Sintoma no log | Causa |
 |---|---|
-| `Port 8080 was already in use` | processo antigo não morreu; `sudo systemctl restart rota-vital` |
-| `Killed` ou `OutOfMemoryError` | RAM insuficiente; reduza `-Xmx` no serviço ou use uma VM maior |
-| `Unable to access jarfile` | o envio do jar falhou; confira `/opt/rota-vital/rota-vital.jar` |
+| `Port 8081 was already in use` | outro processo tomou a porta; `sudo ss -tlnp \| grep 8081` |
+| `Killed` ou `OutOfMemoryError` | RAM insuficiente; reduza `-Xmx` no serviço |
+| `Unable to access jarfile` | o envio falhou; confira `/opt/rota-vital/rota-vital.jar` |
 
-### Responde de dentro da VM mas não de fora
+### A outra aplicação parou de responder
 
-É firewall. Confira a regra da porta 8080:
+Nada no provisionamento toca nela, mas se coincidir com o deploy, o suspeito é
+memória. Confira quem está consumindo:
 
 ```bash
-gcloud compute firewall-rules list --filter="name~8080"
+ps -eo pid,rss,comm --sort=-rss | head -5
+```
+
+Se a JVM estiver grande demais, reduza o `-Xmx` em
+`/etc/systemd/system/rota-vital.service`, depois:
+
+```bash
+sudo systemctl daemon-reload && sudo systemctl restart rota-vital
 ```
 
 ### Voltar para a versão anterior
@@ -327,6 +460,20 @@ sudo cp /opt/rota-vital/rota-vital-anterior.jar /opt/rota-vital/rota-vital.jar
 sudo systemctl restart rota-vital
 ```
 
+### Remover tudo
+
+Se precisar desfazer o provisionamento sem afetar o resto da VM:
+
+```bash
+sudo systemctl disable --now rota-vital
+sudo rm /etc/systemd/system/rota-vital.service /etc/sudoers.d/rota-vital-deploy
+sudo rm /etc/nginx/snippets/rota-vital.conf
+sudo rm -rf /opt/rota-vital && sudo userdel rotavital
+sudo systemctl daemon-reload
+```
+
+E remova a linha `include snippets/rota-vital.conf;` do site do Nginx.
+
 ---
 
 ## Comandos de referência
@@ -337,8 +484,7 @@ sudo systemctl restart rota-vital
 sudo systemctl status rota-vital      # estado
 sudo systemctl restart rota-vital     # reiniciar
 sudo journalctl -u rota-vital -f      # log ao vivo
-sudo journalctl -u rota-vital -n 100  # últimas 100 linhas
-curl localhost:8080/actuator/health   # testar localmente
+curl localhost:8081/actuator/health   # testar localmente
 ```
 
 **Arquivos:**
@@ -349,7 +495,19 @@ curl localhost:8080/actuator/health   # testar localmente
 | `/opt/rota-vital/rota-vital-anterior.jar` | a versão anterior |
 | `/opt/rota-vital/publicar.sh` | troca o jar e reinicia |
 | `/etc/systemd/system/rota-vital.service` | definição do serviço |
+| `/etc/nginx/snippets/rota-vital.conf` | encaminhamento do proxy |
 | `/etc/sudoers.d/rota-vital-deploy` | permissão do deploy |
+
+**A porta aparece em três lugares que precisam concordar:**
+
+| Onde | O quê |
+|---|---|
+| `application-prod.properties` | `server.port=8081` |
+| `infra/nginx-rota-vital.conf` | `proxy_pass http://127.0.0.1:8081/` |
+| `infra/provisionar.sh` | `PORTA=8081` |
+
+`PerfilProducaoTest.portaConsistenteComOProxy` compara os dois primeiros e
+quebra o build se divergirem.
 
 ---
 
@@ -357,10 +515,10 @@ curl localhost:8080/actuator/health   # testar localmente
 
 | Item | Onde entra |
 |---|---|
-| Nginx como proxy reverso e HTTPS | previsto no [PI3-16](../diagrama_arquitetura_redes.png), sem story ainda |
+| HTTPS (certificado TLS) | o Nginx já está lá; falta o certificado |
 | PostgreSQL no lugar do H2 | Entrega 02 |
-| Deploy sem interrupção (zero downtime) | exige duas instâncias e balanceador |
-| Ambiente de homologação | uma VM só no free tier |
+| Deploy sem interrupção | exige duas instâncias e balanceador |
+| VM dedicada | uma máquina só, compartilhada por escolha |
 
-O deploy atual reinicia o serviço, então há alguns segundos de indisponibilidade
-a cada publicação. Para o escopo do projeto, é aceitável.
+O deploy reinicia o serviço, então há alguns segundos de indisponibilidade a
+cada publicação. Para o escopo do projeto, é aceitável.

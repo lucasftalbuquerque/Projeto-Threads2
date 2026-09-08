@@ -69,6 +69,36 @@ class PerfilProducaoTest {
     }
 
     @Test
+    @DisplayName("A aplicacao escuta apenas em localhost, atras do proxy")
+    void escutaSomenteLocalmente() throws IOException {
+        assertThat(producao().getProperty("server.address"))
+                .as("a VM e compartilhada; so o Nginx deve alcancar a aplicacao")
+                .isEqualTo("127.0.0.1");
+    }
+
+    /**
+     * A porta aparece em tres lugares que precisam concordar: este arquivo, o
+     * proxy do Nginx e o servico systemd. Divergencia entre eles produz um
+     * deploy que publica sem erro e uma URL que nao responde.
+     */
+    @Test
+    @DisplayName("A porta de producao bate com a configurada no proxy do Nginx")
+    void portaConsistenteComOProxy() throws IOException {
+        String porta = producao().getProperty("server.port");
+
+        assertThat(porta)
+                .as("porta de producao, diferente da 8080 usada em desenvolvimento")
+                .isEqualTo("8081");
+
+        String proxy = java.nio.file.Files.readString(
+                java.nio.file.Path.of("infra/nginx-rota-vital.conf"));
+
+        assertThat(proxy)
+                .as("o proxy_pass do Nginx precisa apontar para a mesma porta")
+                .contains("127.0.0.1:" + porta);
+    }
+
+    @Test
     @DisplayName("Nenhuma senha esta escrita no arquivo de producao")
     void semSegredoVersionado() throws IOException {
         Properties prod = producao();

@@ -1,2 +1,34 @@
-/mvnw text eol=lf
-*.cmd text eol=crlf
+# Normalizacao de fim de linha.
+#
+# Windows usa CRLF, Linux usa LF. O CI roda em Ubuntu, e alguns arquivos
+# QUEBRAM se chegarem la com CRLF:
+#
+#   - script shell: o interpretador le "#!/usr/bin/env bash\r" e nao encontra
+#     o programa, com a mensagem confusa "bad interpreter: No such file"
+#   - heredoc dentro de YAML: o marcador de fim vira "EOF\r", nao casa com
+#     "EOF", e o script fica esperando um fim que nunca chega
+#
+# 'eol=lf' garante LF no disco de quem clona, mesmo no Windows.
+
+# Detecta texto automaticamente e normaliza para LF no repositorio
+* text=auto eol=lf
+
+# Arquivos que o Linux executa: LF obrigatorio
+/mvnw        text eol=lf
+*.sh         text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+*.conf       text eol=lf
+
+# Arquivos que o Windows executa: CRLF obrigatorio
+*.cmd        text eol=crlf
+*.bat        text eol=crlf
+
+# .drawio e XML, nao binario: entra na normalizacao geral acima, assim o
+# diff continua legivel quando alguem altera um diagrama.
+
+# Binarios de verdade: nunca converter, converter corromperia o arquivo
+*.png        binary
+*.jpg        binary
+*.jar        binary
+*.pdf        binary

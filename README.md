@@ -185,10 +185,14 @@ Para reproduzir localmente o que roda na VM:
 java -jar target/rota-vital-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 ```
 
-O perfil `prod` desliga o console do H2, restringe o Actuator ao `/health` e
-tira o SQL do log. Ver
+O perfil `prod` desliga o console do H2, restringe o Actuator ao `/health`,
+tira o SQL do log e faz a aplicação escutar em `127.0.0.1:8081` — na VM ela
+fica atrás do Nginx, servida em `/rota-vital/`. Ver
 [application-prod.properties](src/main/resources/application-prod.properties)
 e [docs/deploy.md](docs/deploy.md).
+
+> Rodando localmente com o perfil `prod`, a aplicação responde em
+> `http://localhost:8081`, não na 8080.
 
 ## Equipe
 

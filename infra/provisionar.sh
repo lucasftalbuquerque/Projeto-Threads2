@@ -2,16 +2,18 @@
 #
 # Prepara a VM Ubuntu para receber a aplicacao. Roda uma vez, na mao.
 #
-#   curl -fsSL https://raw.githubusercontent.com/rsc3-pixel/Projeto3-2026.2/main/infra/provisionar.sh | sudo bash
-#
-# ou, com o repositorio clonado na VM:
-#
 #   sudo bash infra/provisionar.sh
 #
-# O que faz:
-#   1. instala o Java 21, se ainda nao houver
-#   2. cria um usuario sem privilegios para rodar a aplicacao
-#   3. instala o script de publicacao e o servico systemd
+# ATENCAO: esta VM e COMPARTILHADA com outra aplicacao. O script foi escrito
+# para conviver com o que ja esta rodando:
+#
+#   - nao para, reinicia nem reconfigura servico algum que nao seja o proprio
+#   - nao mexe em Nginx, Docker ou qualquer proxy existente
+#   - so instala Java se nao houver, e nunca troca a versao de um Java ja
+#     instalado (outra aplicacao pode depender dele)
+#   - confere se a porta esta livre ANTES de instalar qualquer coisa, e para
+#     com instrucao clara se estiver ocupada
+#   - roda a aplicacao como usuario proprio, sem acesso ao resto da maquina
 #
 # E idempotente: rodar duas vezes nao quebra nada.
 
@@ -20,6 +22,7 @@ set -euo pipefail
 DIRETORIO=/opt/rota-vital
 USUARIO_APP=rotavital
 VERSAO_JAVA=21
+PORTA=8081   # 8080 costuma estar ocupada; ver application-prod.properties
 
 # Cores so quando a saida e um terminal. Em log de CI, texto puro.
 if [ -t 1 ]; then
@@ -28,9 +31,9 @@ else
     VERDE=''; AMARELO=''; VERMELHO=''; FIM=''
 fi
 
-info()   { echo -e "${VERDE}==>${FIM} $1"; }
-aviso()  { echo -e "${AMARELO}==>${FIM} $1"; }
-erro()   { echo -e "${VERMELHO}==>${FIM} $1" >&2; }
+info()  { echo -e "${VERDE}==>${FIM} $1"; }
+aviso() { echo -e "${AMARELO}==>${FIM} $1"; }
+erro()  { echo -e "${VERMELHO}==>${FIM} $1" >&2; }
 
 if [ "$EUID" -ne 0 ]; then
     erro "Rode com sudo: sudo bash infra/provisionar.sh"
@@ -38,10 +41,82 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 1. Java
+# 0. O que ja existe nesta maquina
+#
+# Antes de instalar qualquer coisa, mostra o cenario. Numa VM compartilhada,
+# comecar sem olhar e como mexer no codigo sem ler.
 # -----------------------------------------------------------------------------
-if java -version 2>&1 | grep -q "version \"${VERSAO_JAVA}"; then
-    info "Java ${VERSAO_JAVA} ja instalado."
+info "Inspecionando a maquina..."
+echo
+echo "  Memoria:"
+free -h | sed 's/^/    /'
+echo
+echo "  Portas em uso:"
+if command -v ss >/dev/null 2>&1; then
+    ss -tlnp 2>/dev/null | awk 'NR==1 || /LISTEN/' | sed 's/^/    /' | head -15
+else
+    aviso "  (ss indisponivel; pulando)"
+fi
+echo
+
+# -----------------------------------------------------------------------------
+# 1. A porta esta livre?
+#
+# Esta checagem vem antes de tudo. Instalar Java e criar servico numa maquina
+# onde a porta esta ocupada so produz um servico que reinicia em loop.
+# -----------------------------------------------------------------------------
+if ss -tln 2>/dev/null | grep -qE "[:.]${PORTA}[[:space:]]"; then
+    erro "A porta ${PORTA} ja esta em uso nesta VM."
+    echo
+    erro "Quem esta usando:"
+    ss -tlnp 2>/dev/null | grep -E "[:.]${PORTA}[[:space:]]" | sed 's/^/    /' >&2
+    echo
+    erro "Escolha outra porta livre e ajuste nos TRES lugares:"
+    erro "  1. PORTA, no topo deste script"
+    erro "  2. server.port, em src/main/resources/application-prod.properties"
+    erro "  3. PORTA_APP, em .github/workflows/ci.yml"
+    erro "Os tres precisam bater, senao o deploy publica e a verificacao falha."
+    exit 1
+fi
+info "Porta ${PORTA} livre."
+
+# -----------------------------------------------------------------------------
+# 2. Java
+#
+# Se ja houver Java instalado, NAO trocamos a versao: outra aplicacao pode
+# depender dela. So instalamos quando nao ha Java nenhum, ou quando o
+# instalado e antigo demais para rodar a aplicacao.
+# -----------------------------------------------------------------------------
+if command -v java >/dev/null 2>&1; then
+    JAVA_ATUAL=$(java -version 2>&1 | head -1)
+
+    # Extrai o numero maior da versao. Tres formatos precisam funcionar:
+    #   "21.0.12"  -> 21   (moderno)
+    #   "25"       -> 25   (sem minor, acontece em release nova)
+    #   "1.8.0_382" -> 8   (formato antigo: o 1 e prefixo, o real vem depois)
+    VERSAO_DETECTADA=$(java -version 2>&1 | head -1 \
+        | grep -oE 'version "[0-9]+(\.[0-9]+)?' \
+        | grep -oE '[0-9]+(\.[0-9]+)?$' \
+        | awk -F. '{ if ($1 == 1 && NF > 1) print $2; else print $1 }')
+
+    # Se a extracao falhar por formato inesperado, tratamos como 0 e o script
+    # instala o Java 21 ao lado. Melhor instalar de novo que assumir errado.
+    if ! [[ "${VERSAO_DETECTADA:-}" =~ ^[0-9]+$ ]]; then
+        aviso "Nao consegui interpretar a versao do Java: ${JAVA_ATUAL}"
+        VERSAO_DETECTADA=0
+    fi
+
+    if [ "$VERSAO_DETECTADA" -ge "$VERSAO_JAVA" ]; then
+        info "Java ja instalado e suficiente: ${JAVA_ATUAL}"
+    else
+        aviso "Java instalado e antigo: ${JAVA_ATUAL}"
+        aviso "A aplicacao precisa da versao ${VERSAO_JAVA} ou superior."
+        aviso "Instalando o ${VERSAO_JAVA} AO LADO, sem remover o atual."
+        apt-get update -qq
+        apt-get install -y -qq "openjdk-${VERSAO_JAVA}-jre-headless"
+        aviso "Duas versoes convivem. O servico aponta para um caminho fixo,"
+        aviso "entao a aplicacao antiga continua usando a versao dela."
+    fi
 else
     info "Instalando Java ${VERSAO_JAVA}..."
     apt-get update -qq
@@ -51,12 +126,23 @@ else
     info "Java instalado: $(java -version 2>&1 | head -1)"
 fi
 
+# Caminho absoluto do Java 21, para o servico nao depender do que estiver no
+# PATH nem de uma eventual troca do java padrao da maquina.
+JAVA_BIN=$(find /usr/lib/jvm -maxdepth 2 -type f -path "*${VERSAO_JAVA}*/bin/java" 2>/dev/null | head -1)
+if [ -z "$JAVA_BIN" ]; then
+    JAVA_BIN=$(command -v java)
+    aviso "Nao localizei o binario especifico do Java ${VERSAO_JAVA}."
+    aviso "Usando o java do PATH: ${JAVA_BIN}"
+fi
+info "O servico vai usar: ${JAVA_BIN}"
+
 # -----------------------------------------------------------------------------
-# 2. Usuario da aplicacao
+# 3. Usuario da aplicacao
 #
-# A aplicacao nao roda como root. Se alguem explorar uma falha nela, fica
-# limitado ao que este usuario pode fazer, que e quase nada: sem shell de
-# login, sem diretorio home, dono apenas do proprio diretorio.
+# A aplicacao nao roda como root nem com o seu usuario. Se alguem explorar uma
+# falha nela, fica limitado ao que este usuario pode fazer, que e quase nada:
+# sem shell de login, sem home, dono apenas do proprio diretorio. Isso importa
+# mais ainda aqui, porque a outra aplicacao da VM esta no mesmo disco.
 # -----------------------------------------------------------------------------
 if id "$USUARIO_APP" &>/dev/null; then
     info "Usuario '${USUARIO_APP}' ja existe."
@@ -66,7 +152,7 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 3. Diretorio
+# 4. Diretorio
 # -----------------------------------------------------------------------------
 info "Preparando ${DIRETORIO}..."
 mkdir -p "$DIRETORIO"
@@ -74,7 +160,7 @@ chown "$USUARIO_APP:$USUARIO_APP" "$DIRETORIO"
 chmod 755 "$DIRETORIO"
 
 # -----------------------------------------------------------------------------
-# 4. Script de publicacao
+# 5. Script de publicacao
 #
 # Fica na VM em vez de no workflow porque o deploy precisa de sudo para
 # reiniciar o servico. Concentrando aqui, a regra do sudoers libera um script
@@ -86,6 +172,8 @@ cat > "${DIRETORIO}/publicar.sh" <<'PUBLICAR'
 #
 # Troca o jar em uso pelo recem-enviado e reinicia o servico.
 # Chamado pelo workflow via ssh, com sudo.
+#
+# Mexe SOMENTE no servico rota-vital. Nenhuma outra aplicacao da VM e tocada.
 
 set -euo pipefail
 
@@ -111,7 +199,7 @@ mv "$NOVO" "$ATUAL"
 chown rotavital:rotavital "$ATUAL"
 chmod 644 "$ATUAL"
 
-echo "Reiniciando o servico..."
+echo "Reiniciando o servico rota-vital..."
 systemctl restart rota-vital
 
 # Da tempo do systemd registrar falha imediata (porta ocupada, jar
@@ -130,7 +218,7 @@ PUBLICAR
 chmod 755 "${DIRETORIO}/publicar.sh"
 
 # -----------------------------------------------------------------------------
-# 5. Servico systemd
+# 6. Servico systemd
 #
 # systemd cuida de: subir a aplicacao no boot, reiniciar se ela cair e
 # concentrar o log em um lugar (journalctl).
@@ -149,13 +237,14 @@ User=${USUARIO_APP}
 Group=${USUARIO_APP}
 WorkingDirectory=${DIRETORIO}
 
-# O perfil prod desliga o console do H2 e restringe o actuator.
-# Ver src/main/resources/application-prod.properties.
+# O perfil prod desliga o console do H2, restringe o actuator e usa a porta
+# ${PORTA}. Ver src/main/resources/application-prod.properties.
 Environment="SPRING_PROFILES_ACTIVE=prod"
 
-# -Xmx512m limita a memoria. A VM free tier do GCP tem 1 GB; sem limite, a
-# JVM tenta usar 1/4 da RAM e o sistema pode ficar sem folega.
-ExecStart=/usr/bin/java -Xmx512m -jar ${DIRETORIO}/rota-vital.jar
+# -Xmx384m limita o heap. A VM e compartilhada: sem limite, a JVM tenta usar
+# 1/4 da RAM total e pode fazer o kernel matar processo por falta de memoria,
+# e o processo morto pode ser o da OUTRA aplicacao.
+ExecStart=${JAVA_BIN} -Xmx384m -jar ${DIRETORIO}/rota-vital.jar
 
 # Reinicia se cair, esperando 10s entre tentativas para nao entrar em
 # ciclo rapido de falha.
@@ -169,6 +258,7 @@ SyslogIdentifier=rota-vital
 
 # --- Restricoes de seguranca ---
 # Camada extra caso alguem consiga executar codigo dentro da aplicacao.
+# Numa VM compartilhada isso protege tambem a outra aplicacao.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
@@ -183,7 +273,7 @@ systemctl daemon-reload
 systemctl enable rota-vital
 
 # -----------------------------------------------------------------------------
-# 6. Permissao de sudo para o script de publicacao
+# 7. Permissao de sudo para o script de publicacao
 #
 # O usuario que o GitHub Actions usa precisa reiniciar o servico, o que exige
 # root. Em vez de dar sudo irrestrito, liberamos apenas este script.
@@ -197,7 +287,8 @@ if [ -n "$USUARIO_DEPLOY" ] && [ "$USUARIO_DEPLOY" != "root" ]; then
     chmod 440 /etc/sudoers.d/rota-vital-deploy
 
     # visudo -c recusa arquivo malformado. Sem esta checagem, um erro de
-    # sintaxe poderia travar o sudo da maquina inteira.
+    # sintaxe poderia travar o sudo da maquina inteira, o que numa VM com
+    # outra aplicacao em producao seria bem ruim.
     if ! visudo -c -q; then
         erro "Regra de sudo invalida. Removendo."
         rm -f /etc/sudoers.d/rota-vital-deploy
@@ -211,14 +302,20 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-info "Provisionamento concluido."
+info "Provisionamento concluido. Nenhum outro servico foi alterado."
 echo
 echo "Falta:"
-echo "  1. Liberar a porta 8080 no firewall do GCP (ver docs/deploy.md)"
+echo "  1. Liberar a porta ${PORTA} no firewall do GCP (ver docs/deploy.md)"
 echo "  2. Cadastrar os segredos no GitHub: VM_HOST, VM_USUARIO, VM_CHAVE_SSH"
 echo "  3. Dar push na main para o pipeline publicar"
 echo
 echo "Comandos uteis:"
-echo "  sudo systemctl status rota-vital     estado do servico"
-echo "  sudo journalctl -u rota-vital -f     log ao vivo"
-echo "  curl localhost:8080/actuator/health  testar de dentro da VM"
+echo "  sudo systemctl status rota-vital        estado do servico"
+echo "  sudo journalctl -u rota-vital -f        log ao vivo"
+echo "  curl localhost:${PORTA}/actuator/health   testar de dentro da VM"
+echo
+echo "Para remover tudo o que este script criou:"
+echo "  sudo systemctl disable --now rota-vital"
+echo "  sudo rm /etc/systemd/system/rota-vital.service /etc/sudoers.d/rota-vital-deploy"
+echo "  sudo rm -rf ${DIRETORIO} && sudo userdel ${USUARIO_APP}"
+echo "  sudo systemctl daemon-reload"
