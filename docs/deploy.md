@@ -12,11 +12,14 @@ decisões deste documento.
 
 O que já existe lá:
 
-| Porta | Serviço |
-|---|---|
-| 80 | Nginx |
-| 3000 | Node (a outra aplicação) |
-| **8081** | **Rota Vital** (livre, escolhida por isso) |
+| Porta | Serviço | Domínio |
+|---|---|---|
+| 80 / 443 | Nginx | — |
+| 3000 | Flux (Node) | `rsc3-flux.duckdns.org` |
+| **8081** | **Rota Vital** | `rsc3-rotavital.duckdns.org` |
+
+O Nginx já tem **Certbot configurado**, então o Rota Vital ganha HTTPS de
+graça, com o mesmo padrão dos outros sites da máquina.
 
 Três consequências:
 
@@ -24,28 +27,26 @@ Três consequências:
    disputada. Duas aplicações na mesma porta não convivem: a segunda a subir
    falha com `Port already in use`.
 
-2. **A aplicação entra atrás do Nginx que já está lá.** Em vez de abrir mais
-   uma porta na internet, ela é servida em `/rota-vital/`. Nenhuma regra nova
-   de firewall, e o desenho fica igual ao
-   [diagrama de arquitetura do PI3-16](../diagrama_arquitetura_redes.png), que
-   já previa o Nginx como ponto único de entrada.
+2. **A aplicação entra atrás do Nginx que já está lá**, com domínio próprio.
+   Nenhuma regra nova de firewall, HTTPS pelo Certbot, e o desenho fica igual
+   ao [diagrama de arquitetura do PI3-16](../diagrama_arquitetura_redes.png),
+   que já previa o Nginx como ponto único de entrada.
 
 3. **Nada do provisionamento toca no que já roda.** O script não para,
    reinicia nem reconfigura serviço algum além do próprio, e confere se a
    porta está livre antes de instalar qualquer coisa.
 
 ```
-                 internet
-                     │  porta 80
-                     ▼
-              ┌─────────────┐
-              │    Nginx    │  já existia
-              └──┬───────┬──┘
-       /         │       │      /rota-vital/
-   (outra app)   │       │
-                 ▼       ▼
-          127.0.0.1:3000   127.0.0.1:8081
-             Node            Rota Vital (JVM)
+                      internet
+                          │  HTTPS / 443
+                          ▼
+                  ┌─────────────┐
+                  │    Nginx    │  já existia, com Certbot
+                  └──┬───────┬──┘
+    rsc3-flux...    │       │    rsc3-rotavital...
+                    ▼       ▼
+             127.0.0.1:3000   127.0.0.1:8081
+                Flux            Rota Vital (JVM)
 ```
 
 A aplicação escuta em `127.0.0.1`, não em `0.0.0.0`. O sistema operacional
@@ -154,33 +155,28 @@ java -version                          # deve mostrar 21
 sudo systemctl status rota-vital       # inativo, ainda sem jar
 ```
 
-### 1.3 Configurar o Nginx
+### 1.3 Criar o subdomínio
 
-Este é o passo que faz a aplicação aparecer na internet. Ele **mexe na
-configuração que já serve a outra aplicação**, então vale ler antes de rodar.
+Em [duckdns.org](https://www.duckdns.org), com a mesma conta dos domínios que
+já existem:
 
-Copie o trecho de configuração:
+1. campo **sub domain**: `rsc3-rotavital`
+2. **add domain**
+3. aponte para o IP externo da VM
 
-```bash
-sudo cp infra/nginx-rota-vital.conf /etc/nginx/snippets/rota-vital.conf
-```
-
-Descubra qual arquivo está servindo o site:
+Confirme que resolveu:
 
 ```bash
-ls /etc/nginx/sites-enabled/
+dig +short rsc3-rotavital.duckdns.org
 ```
 
-Abra esse arquivo e, **dentro do bloco `server { ... }`**, acrescente uma
-linha:
+Deve devolver o IP da VM. Se vier vazio, espere um minuto e tente de novo.
 
-```nginx
-server {
-    listen 80;
-    # ... o que já existe, sem alterar ...
+### 1.4 Configurar o Nginx
 
-    include snippets/rota-vital.conf;    # <- só esta linha
-}
+```bash
+sudo cp infra/nginx-rota-vital.conf /etc/nginx/sites-available/rota-vital
+sudo ln -s /etc/nginx/sites-available/rota-vital /etc/nginx/sites-enabled/
 ```
 
 Valide **antes** de aplicar:
@@ -189,9 +185,9 @@ Valide **antes** de aplicar:
 sudo nginx -t
 ```
 
-`nginx -t` testa a configuração sem aplicá-la. Se houver erro de sintaxe, ele
-recusa e o Nginx atual continua servindo normalmente. **Nunca recarregue sem
-esse teste numa máquina com aplicação em produção.**
+`nginx -t` testa sem aplicar. Havendo erro de sintaxe, ele recusa e o Nginx
+atual continua servindo normalmente. **Nunca recarregue sem esse teste numa
+máquina com aplicação em produção.**
 
 Com o teste passando:
 
@@ -200,14 +196,26 @@ sudo systemctl reload nginx
 ```
 
 `reload` relê a configuração sem derrubar conexões em andamento, diferente de
-`restart`. A outra aplicação não sente nada.
+`restart`. O Flux não sente nada.
 
-> **Se algo der errado:** remova a linha `include`, rode `sudo nginx -t` e
-> `sudo systemctl reload nginx`. Tudo volta ao que era.
+### 1.5 Emitir o certificado HTTPS
 
-### 1.4 Firewall
+```bash
+sudo certbot --nginx -d rsc3-rotavital.duckdns.org
+```
 
-**Nada a fazer.** A porta 80 já está aberta (é por ela que a outra aplicação
+O Certbot **edita o arquivo do site sozinho**: acrescenta o bloco `listen 443
+ssl`, as linhas de certificado e um segundo bloco `server` redirecionando a
+porta 80 para HTTPS. É por isso que o arquivo versionado tem apenas o bloco
+da porta 80 — o resto é gerado, e reescrever manualmente atrapalharia a
+renovação automática.
+
+> **Se algo der errado:** `sudo rm /etc/nginx/sites-enabled/rota-vital`,
+> depois `sudo nginx -t && sudo systemctl reload nginx`. Tudo volta ao que era.
+
+### 1.6 Firewall
+
+**Nada a fazer.** As portas 80 e 443 já estão abertas (é por elas que o Flux
 responde), e a 8081 não precisa ser exposta — a aplicação só escuta em
 `localhost`.
 
