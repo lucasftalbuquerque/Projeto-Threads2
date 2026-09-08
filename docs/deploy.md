@@ -134,11 +134,18 @@ antes de qualquer alteração. Depois:
 
 Rodar duas vezes não causa problema.
 
-> **Sobre a memória.** O serviço limita o heap da JVM em 384 MB
-> (`-Xmx384m`). Sem limite, ela tentaria usar 1/4 da RAM total e poderia fazer
-> o kernel matar processo por falta de memória — e o processo morto poderia
-> ser o da outra aplicação. Se aparecer `OutOfMemoryError` no log, o valor
-> sobe; enquanto isso, o conservador protege o vizinho.
+> **Sobre a memória.** A VM tem 978 MB no total e cerca de 577 MB
+> realmente disponíveis (`MemAvailable`) com o Flux rodando.
+>
+> O serviço limita o heap em 256 MB (`-Xmx256m`), com teto de metaspace e
+> coletor serial. **A conta que importa: a JVM consome mais que o heap.**
+> Metaspace, pilhas de thread e buffers ficam fora dele.
+>
+> Medição real com esses limites: **331 MB** de memória residente, estável
+> após 100 requisições aos cinco recursos da API. Sobram ~246 MB de folga.
+>
+> Se aparecer `OutOfMemoryError` no log, aumente o `-Xmx` em passos de 64m e
+> acompanhe com `head -3 /proc/meminfo`.
 
 Confira ao final:
 

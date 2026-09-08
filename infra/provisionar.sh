@@ -241,10 +241,34 @@ WorkingDirectory=${DIRETORIO}
 # ${PORTA}. Ver src/main/resources/application-prod.properties.
 Environment="SPRING_PROFILES_ACTIVE=prod"
 
-# -Xmx384m limita o heap. A VM e compartilhada: sem limite, a JVM tenta usar
-# 1/4 da RAM total e pode fazer o kernel matar processo por falta de memoria,
-# e o processo morto pode ser o da OUTRA aplicacao.
-ExecStart=${JAVA_BIN} -Xmx384m -jar ${DIRETORIO}/rota-vital.jar
+# Limites de memoria, calculados para esta VM: 978 MB no total, ~577 MB
+# realmente disponiveis (MemAvailable) com o Flux rodando.
+#
+# -Xmx256m e o heap. A conta que importa: a JVM consome MAIS que o heap.
+# Metaspace, pilhas de thread e buffers ficam fora dele e somam 100-200 MB
+# numa aplicacao Spring Boot. Com heap de 384m o total passaria de 500 MB e
+# sobrariam ~40 MB para o resto do sistema, o que e pouco demais: o kernel
+# comecaria a matar processo por falta de memoria, e o morto poderia ser o
+# da OUTRA aplicacao.
+#
+# Com 256m, o consumo MEDIDO do processo foi de 331 MB de memoria residente,
+# estavel apos 100 requisicoes aos cinco recursos da API. Sobram entao cerca
+# de 246 MB de folga nesta VM.
+#
+# A aplicacao carrega ~100 bolsas e algumas dezenas de requisicoes: o que
+# consome memoria aqui e o proprio Spring, nao os dados.
+#
+# -XX:MaxMetaspaceSize teto para as definicoes de classe. Sem ele o
+# metaspace cresce sem limite ate o processo ser morto, e Spring carrega
+# muita classe.
+#
+# -XX:+UseSerialGC coletor de uma thread so. Numa VM com 2 vCPU
+# compartilhadas o coletor paralelo gasta mais em coordenacao do que ganha
+# em paralelismo, alem de reservar mais memoria.
+#
+# Se aparecer OutOfMemoryError no log, aumente o -Xmx em passos de 64m e
+# acompanhe o MemAvailable com: head -3 /proc/meminfo
+ExecStart=${JAVA_BIN} -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -jar ${DIRETORIO}/rota-vital.jar
 
 # Reinicia se cair, esperando 10s entre tentativas para nao entrar em
 # ciclo rapido de falha.
