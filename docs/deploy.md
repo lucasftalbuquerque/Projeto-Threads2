@@ -120,9 +120,25 @@ gcloud compute ssh flux --zone=us-west1-a
 
 ### 1.2 Rodar o provisionamento
 
+O repositório é **privado**, então `curl` anônimo no `raw.githubusercontent`
+devolve 404. Clone na VM:
+
 ```bash
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/rsc3-pixel/Projeto3-2026.2/main/infra/provisionar.sh)"
+cd ~
+git clone https://github.com/rsc3-pixel/Projeto3-2026.2.git rota-vital-repo
+sudo bash rota-vital-repo/infra/provisionar.sh
 ```
+
+Depois de provisionar, o clone pode sair — o deploy manda o jar por `scp`,
+não usa o repositório na VM:
+
+```bash
+rm -rf ~/rota-vital-repo
+```
+
+> Se o clone pedir senha, o token em `~/.git-credentials` expirou. Gere um
+> Personal Access Token em GitHub > Settings > Developer settings > Tokens,
+> com escopo `repo`, e use-o como senha.
 
 O script começa mostrando memória e portas em uso, para você ver o cenário
 antes de qualquer alteração. Depois:
@@ -175,9 +191,11 @@ Deve devolver o IP da VM. Se vier vazio, espere um minuto e tente de novo.
 ### 1.4 Configurar o Nginx
 
 ```bash
-sudo cp infra/nginx-rota-vital.conf /etc/nginx/sites-available/rota-vital
+sudo cp ~/rota-vital-repo/infra/nginx-rota-vital.conf         /etc/nginx/sites-available/rota-vital
 sudo ln -s /etc/nginx/sites-available/rota-vital /etc/nginx/sites-enabled/
 ```
+
+> Faça isto **antes** de remover o clone.
 
 Valide **antes** de aplicar:
 
