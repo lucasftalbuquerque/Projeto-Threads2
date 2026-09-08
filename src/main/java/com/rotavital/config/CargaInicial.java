@@ -35,6 +35,12 @@ import java.util.Random;
  *
  * <p>Nao roda no perfil {@code test}: teste que depende de carga previa fica
  * fragil, cada um monta o proprio cenario.</p>
+ *
+ * <p><b>Roda em producao de proposito.</b> Carga automatica em producao
+ * normalmente e erro grave, mas aqui o banco e H2 em memoria: ele sobe vazio a
+ * cada restart, e sem a carga a URL publica responderia listas vazias. Quando
+ * o PostgreSQL entrar (Entrega 02), o banco passa a ser persistente e esta
+ * anotacao vira {@code @Profile("!test & !prod")}.</p>
  */
 @Component
 @Profile("!test")

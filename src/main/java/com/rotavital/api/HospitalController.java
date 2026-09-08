@@ -75,8 +75,6 @@ public class HospitalController {
     public List<RequisicaoResponse> requisicoesDoHospital(
             @PathVariable String id,
             @RequestParam(required = false) StatusRequisicao status) {
-        return requisicoes.listarPorHospital(id, status).stream()
-                .map(RequisicaoResponse::de)
-                .toList();
+        return requisicoes.listarPorHospital(id, status);
     }
 }

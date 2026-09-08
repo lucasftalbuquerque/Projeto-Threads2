@@ -80,6 +80,7 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 | Artefato | Link |
 |---|---|
 | Guia do CRUD (decisões de JPA e arquitetura) | [docs/entendendo-o-crud.md](docs/entendendo-o-crud.md) |
+| Pipeline e deploy | [docs/deploy.md](docs/deploy.md) |
 
 **Screenshots:** _(a preencher)_
 
@@ -174,6 +175,20 @@ a Entrega 02 e exige apenas trocar a URL e o driver em
 ./mvnw test            # roda os testes
 ./mvnw clean package   # gera o jar em target/
 ```
+
+### Rodando em modo produção
+
+Para reproduzir localmente o que roda na VM:
+
+```bash
+./mvnw clean package -DskipTests
+java -jar target/rota-vital-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
+```
+
+O perfil `prod` desliga o console do H2, restringe o Actuator ao `/health` e
+tira o SQL do log. Ver
+[application-prod.properties](src/main/resources/application-prod.properties)
+e [docs/deploy.md](docs/deploy.md).
 
 ## Equipe
 

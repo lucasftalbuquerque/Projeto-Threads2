@@ -7,9 +7,6 @@ import com.rotavital.api.dto.ItemRequisicaoRequest;
 import com.rotavital.api.dto.ItemRequisicaoResponse;
 import com.rotavital.api.dto.RequisicaoRequest;
 import com.rotavital.api.dto.RequisicaoResponse;
-import com.rotavital.dominio.Alocacao;
-import com.rotavital.dominio.ItemRequisicao;
-import com.rotavital.dominio.Requisicao;
 import com.rotavital.dominio.enums.PrioridadeRequisicao;
 import com.rotavital.dominio.enums.StatusRequisicao;
 import com.rotavital.servico.RequisicaoServico;
@@ -54,29 +51,27 @@ public class RequisicaoController {
             @RequestParam(required = false) StatusRequisicao status,
             @RequestParam(required = false) String hospitalId,
             @RequestParam(required = false) PrioridadeRequisicao prioridade) {
-        return requisicoes.listar(status, hospitalId, prioridade).stream()
-                .map(RequisicaoResponse::de)
-                .toList();
+        return requisicoes.listar(status, hospitalId, prioridade);
     }
 
     @GetMapping("/{id}")
     public RequisicaoResponse buscar(@PathVariable String id) {
-        return RequisicaoResponse.de(requisicoes.buscar(id));
+        return requisicoes.detalhar(id);
     }
 
     @PostMapping
     public ResponseEntity<RequisicaoResponse> criar(@Valid @RequestBody RequisicaoRequest dados) {
-        Requisicao criada = requisicoes.criar(dados);
+        RequisicaoResponse criada = requisicoes.criar(dados);
         return ResponseEntity
-                .created(URI.create("/api/v1/requisicoes/" + criada.getId()))
-                .body(RequisicaoResponse.de(criada));
+                .created(URI.create("/api/v1/requisicoes/" + criada.id()))
+                .body(criada);
     }
 
     @PatchMapping("/{id}")
     public RequisicaoResponse atualizarStatus(
             @PathVariable String id,
             @Valid @RequestBody AtualizarStatusRequisicaoRequest dados) {
-        return RequisicaoResponse.de(requisicoes.atualizarStatus(id, dados.status()));
+        return requisicoes.atualizarStatus(id, dados.status());
     }
 
     // -----------------------------------------------------------------------
@@ -85,19 +80,17 @@ public class RequisicaoController {
 
     @GetMapping("/{id}/itens")
     public List<ItemRequisicaoResponse> listarItens(@PathVariable String id) {
-        return requisicoes.listarItens(id).stream()
-                .map(ItemRequisicaoResponse::de)
-                .toList();
+        return requisicoes.listarItens(id);
     }
 
     @PostMapping("/{id}/itens")
     public ResponseEntity<ItemRequisicaoResponse> adicionarItem(
             @PathVariable String id,
             @Valid @RequestBody ItemRequisicaoRequest dados) {
-        ItemRequisicao item = requisicoes.adicionarItem(id, dados);
+        ItemRequisicaoResponse item = requisicoes.adicionarItem(id, dados);
         return ResponseEntity
-                .created(URI.create("/api/v1/requisicoes/" + id + "/itens/" + item.getId()))
-                .body(ItemRequisicaoResponse.de(item));
+                .created(URI.create("/api/v1/requisicoes/" + id + "/itens/" + item.id()))
+                .body(item);
     }
 
     @DeleteMapping("/{id}/itens/{itemId}")
@@ -114,20 +107,18 @@ public class RequisicaoController {
     @GetMapping("/{id}/itens/{itemId}/alocacoes")
     public List<AlocacaoResponse> listarAlocacoes(@PathVariable String id,
                                                   @PathVariable String itemId) {
-        return requisicoes.listarAlocacoes(id, itemId).stream()
-                .map(AlocacaoResponse::de)
-                .toList();
+        return requisicoes.listarAlocacoes(id, itemId);
     }
 
     @PostMapping("/{id}/itens/{itemId}/alocacoes")
     public ResponseEntity<AlocacaoResponse> alocar(@PathVariable String id,
                                                    @PathVariable String itemId,
                                                    @Valid @RequestBody AlocacaoRequest dados) {
-        Alocacao alocacao = requisicoes.alocar(id, itemId, dados);
+        AlocacaoResponse alocacao = requisicoes.alocar(id, itemId, dados);
         return ResponseEntity
                 .created(URI.create("/api/v1/requisicoes/" + id + "/itens/" + itemId
-                        + "/alocacoes/" + alocacao.getId()))
-                .body(AlocacaoResponse.de(alocacao));
+                        + "/alocacoes/" + alocacao.id()))
+                .body(alocacao);
     }
 
     @DeleteMapping("/{id}/itens/{itemId}/alocacoes/{alocacaoId}")
