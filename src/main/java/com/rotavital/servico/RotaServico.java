@@ -1,8 +1,10 @@
 package com.rotavital.servico;
 
 import com.rotavital.api.dto.AtualizarStatusRotaRequest;
+import com.rotavital.api.dto.BolsaResponse;
 import com.rotavital.api.dto.EmbarqueBolsaRequest;
 import com.rotavital.api.dto.RotaRequest;
+import com.rotavital.api.dto.RotaResponse;
 import com.rotavital.dominio.Bolsa;
 import com.rotavital.dominio.Hemocentro;
 import com.rotavital.dominio.Hospital;
@@ -54,22 +56,32 @@ public class RotaServico {
     }
 
     @Transactional(readOnly = true)
-    public List<Rota> listar(StatusRota status, String hemocentroId, String hospitalId) {
+    public List<RotaResponse> listar(StatusRota status, String hemocentroId, String hospitalId) {
         return rotas.findAll().stream()
                 .filter(r -> status == null || r.getStatus() == status)
                 .filter(r -> hemocentroId == null
                         || (r.getOrigem() != null && hemocentroId.equals(r.getOrigem().getId())))
                 .filter(r -> hospitalId == null
                         || (r.getDestino() != null && hospitalId.equals(r.getDestino().getId())))
+                .map(RotaResponse::de)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<Rota> listarPorHemocentro(String hemocentroId, StatusRota status) {
+    public List<RotaResponse> listarPorHemocentro(String hemocentroId, StatusRota status) {
         hemocentroServico.buscar(hemocentroId);
         return listar(status, hemocentroId, null);
     }
 
+    @Transactional(readOnly = true)
+    public RotaResponse detalhar(String id) {
+        return RotaResponse.de(buscar(id));
+    }
+
+    /**
+     * Devolve a entidade. Uso interno deste servico, que ja roda dentro de
+     * transacao. O controlador usa {@link #detalhar(String)}.
+     */
     @Transactional(readOnly = true)
     public Rota buscar(String id) {
         return rotas.findById(id)
@@ -77,7 +89,7 @@ public class RotaServico {
     }
 
     @Transactional
-    public Rota criar(RotaRequest dados) {
+    public RotaResponse criar(RotaRequest dados) {
         Hemocentro origem = hemocentroServico.buscar(dados.hemocentroOrigemId());
         Hospital destino = hospitalServico.buscar(dados.hospitalDestinoId());
 
@@ -93,7 +105,7 @@ public class RotaServico {
                 dados.previsaoSaida(),
                 dados.previsaoChegada());
 
-        return rotas.save(rota);
+        return RotaResponse.de(rotas.save(rota));
     }
 
     /**
@@ -102,13 +114,13 @@ public class RotaServico {
      * E o que mantem estoque e logistica coerentes sem exigir duas chamadas.
      */
     @Transactional
-    public Rota atualizarStatus(String id, AtualizarStatusRotaRequest dados) {
+    public RotaResponse atualizarStatus(String id, AtualizarStatusRotaRequest dados) {
         Rota rota = buscar(id);
         StatusRota atual = rota.getStatus();
         StatusRota novo = dados.status();
 
         if (atual == novo) {
-            return rota;
+            return RotaResponse.de(rota);
         }
         if (!TRANSICOES.get(atual).contains(novo)) {
             throw new OperacaoInvalidaException("Transicao invalida: " + atual + " -> " + novo);
@@ -134,16 +146,18 @@ public class RotaServico {
         }
 
         rota.setStatus(novo);
-        return rotas.save(rota);
+        return RotaResponse.de(rotas.save(rota));
     }
 
     @Transactional(readOnly = true)
-    public List<Bolsa> listarBolsas(String rotaId) {
-        return buscar(rotaId).getBolsas();
+    public List<BolsaResponse> listarBolsas(String rotaId) {
+        return buscar(rotaId).getBolsas().stream()
+                .map(BolsaResponse::de)
+                .toList();
     }
 
     @Transactional
-    public Bolsa embarcar(String rotaId, EmbarqueBolsaRequest dados) {
+    public BolsaResponse embarcar(String rotaId, EmbarqueBolsaRequest dados) {
         Rota rota = buscar(rotaId);
 
         if (rota.getStatus() != StatusRota.PLANEJADA) {
@@ -169,7 +183,7 @@ public class RotaServico {
 
         rota.adicionarBolsa(bolsa);
         rotas.save(rota);
-        return bolsa;
+        return BolsaResponse.de(bolsa);
     }
 
     @Transactional

@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 # Roda em push na main e em todo pull request que aponte para ela.
 # O gatilho de pull_request e o que impede que codigo quebrado entre na
@@ -8,21 +8,46 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Permite disparar o pipeline manualmente pela aba Actions, util para
+  # refazer um deploy sem precisar de um commit novo.
+  workflow_dispatch:
+
+# Cancela execucao anterior da mesma branch quando chega push novo. Sem isto,
+# dois pushes seguidos disputam o deploy e o mais antigo pode sobrescrever o
+# mais recente na VM.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUICAO: 'temurin'
+  # A aplicacao escuta em 127.0.0.1:8081 e so e alcancavel pelo Nginx, que
+  # a serve neste dominio com HTTPS. As verificacoes publicas usam esta URL,
+  # nao a porta 8081, que recusa conexao de fora.
+  # Ver infra/nginx-rota-vital.conf e application-prod.properties.
+  URL_PUBLICA: 'https://rsc3-rotavital.duckdns.org'
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # 1. BUILD - o codigo compila?
+  #
+  # Etapa separada de proposito: erro de compilacao aparece em segundos, sem
+  # esperar a suite de testes. Falhar rapido e barato.
+  # ---------------------------------------------------------------------------
   build:
-    name: Build e testes
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
       - name: Baixar o codigo
         uses: actions/checkout@v4
 
-      - name: Configurar JDK 21
+      - name: Configurar JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUICAO }}
           # Guarda as dependencias do Maven entre execucoes. Sem isso,
           # cada build baixa tudo de novo e leva varios minutos.
           cache: maven
@@ -32,8 +57,36 @@ jobs:
       - name: Garantir permissao de execucao do mvnw
         run: chmod +x ./mvnw
 
-      - name: Compilar e rodar os testes
-        run: ./mvnw --batch-mode clean verify
+      - name: Compilar
+        run: ./mvnw --batch-mode clean compile
+
+  # ---------------------------------------------------------------------------
+  # 2. TESTE - o comportamento esta correto?
+  #
+  # 'needs: build' faz esta etapa so comecar se a anterior passou. E o que
+  # cumpre o criterio "falha em qualquer etapa impede o deploy".
+  # ---------------------------------------------------------------------------
+  teste:
+    name: Testes
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Baixar o codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUICAO }}
+          cache: maven
+
+      - name: Garantir permissao de execucao do mvnw
+        run: chmod +x ./mvnw
+
+      - name: Rodar os testes
+        run: ./mvnw --batch-mode test
 
       - name: Publicar relatorio dos testes
         # Roda mesmo quando os testes falham: e justamente quando o
@@ -45,3 +98,186 @@ jobs:
           path: target/surefire-reports/
           retention-days: 7
           if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
+  # 3. EMPACOTAMENTO - gera o jar que vai para a VM
+  #
+  # '-DskipTests' porque a etapa anterior ja rodou a suite inteira. Repetir
+  # aqui so dobraria o tempo do pipeline sem descobrir nada novo.
+  #
+  # O jar sobe como artefato do workflow. Assim o job de deploy pega
+  # exatamente o binario que passou nos testes, em vez de compilar de novo e
+  # arriscar diferenca entre o que foi testado e o que foi publicado.
+  # ---------------------------------------------------------------------------
+  empacotar:
+    name: Empacotamento
+    runs-on: ubuntu-latest
+    needs: teste
+
+    steps:
+      - name: Baixar o codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUICAO }}
+          cache: maven
+
+      - name: Garantir permissao de execucao do mvnw
+        run: chmod +x ./mvnw
+
+      - name: Gerar o jar
+        run: ./mvnw --batch-mode package -DskipTests
+
+      # Nome fixo para o script de deploy nao depender da versao do pom.
+      - name: Renomear para nome fixo
+        run: cp target/rota-vital-*.jar target/rota-vital.jar
+
+      - name: Guardar o jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: aplicacao
+          path: target/rota-vital.jar
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # 4. DEPLOY - publica na VM do Google Cloud
+  #
+  # Duas condicoes para rodar:
+  #   - so na main (nao faz sentido publicar o codigo de um PR aberto)
+  #   - so quando os segredos existem
+  #
+  # A checagem de segredos e o que impede o pipeline de ficar vermelho
+  # enquanto a VM nao esta configurada. Sem ela, todo push falharia no deploy
+  # e o time perderia a referencia de "verde = esta tudo bem".
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy na VM
+    runs-on: ubuntu-latest
+    needs: empacotar
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+
+    steps:
+      - name: Baixar o codigo
+        uses: actions/checkout@v4
+
+      - name: Verificar se os segredos estao configurados
+        id: segredos
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USUARIO: ${{ secrets.VM_USUARIO }}
+          VM_CHAVE_SSH: ${{ secrets.VM_CHAVE_SSH }}
+        run: |
+          if [ -z "$VM_HOST" ] || [ -z "$VM_USUARIO" ] || [ -z "$VM_CHAVE_SSH" ]; then
+            echo "configurado=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Deploy pulado: faltam os segredos VM_HOST, VM_USUARIO ou VM_CHAVE_SSH."
+            echo "::warning::Cadastre em Settings > Secrets and variables > Actions. Ver docs/deploy.md."
+          else
+            echo "configurado=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Baixar o jar gerado
+        if: steps.segredos.outputs.configurado == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: aplicacao
+
+      - name: Preparar a chave SSH
+        if: steps.segredos.outputs.configurado == 'true'
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VM_CHAVE_SSH }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Registra a impressao digital do servidor. Sem isto, o ssh
+          # perguntaria "deseja continuar?" e travaria, porque nao ha
+          # ninguem para responder.
+          ssh-keyscan -H "${{ secrets.VM_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      # Envia para um nome temporario e so depois move para o lugar final.
+      # Se a transferencia cair no meio, o jar em uso continua intacto.
+      - name: Enviar o jar para a VM
+        if: steps.segredos.outputs.configurado == 'true'
+        run: |
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            rota-vital.jar \
+            "${{ secrets.VM_USUARIO }}@${{ secrets.VM_HOST }}:/tmp/rota-vital-novo.jar"
+
+      - name: Publicar e reiniciar o servico
+        if: steps.segredos.outputs.configurado == 'true'
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "${{ secrets.VM_USUARIO }}@${{ secrets.VM_HOST }}" \
+            'sudo /opt/rota-vital/publicar.sh'
+
+      # Duas verificacoes em vez de uma, e a ordem importa: se ambas
+      # falhassem juntas, nao daria para saber se o problema e a aplicacao ou
+      # o proxy. Separadas, o job aponta a camada exata.
+      - name: Confirmar que a aplicacao subiu (dentro da VM)
+        if: steps.segredos.outputs.configurado == 'true'
+        run: |
+          # A aplicacao escuta em 127.0.0.1:8081, entao esta checagem so
+          # funciona de dentro da maquina. Por isso o curl roda via ssh.
+          #
+          # Enquanto ela sobe, o actuator responde 503: o readiness ainda nao
+          # ficou pronto. Isso e normal, nao e falha, entao insistimos ate UP.
+          #
+          # A janela e de 3 minutos. Numa maquina de desenvolvimento a
+          # aplicacao sobe em ~12s, mas esta VM e compartilhada com outras
+          # aplicacoes e o tempo e maior. Margem curta transformaria deploy
+          # lento em deploy vermelho.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "${{ secrets.VM_USUARIO }}@${{ secrets.VM_HOST }}" bash -s <<'REMOTO'
+          for tentativa in $(seq 1 36); do
+            resposta=$(curl -sf --max-time 5 \
+              "http://127.0.0.1:8081/actuator/health" || true)
+
+            if echo "$resposta" | grep -q '"status":"UP"'; then
+              echo "Aplicacao no ar apos $((tentativa * 5))s: $resposta"
+              exit 0
+            fi
+
+            echo "Tentativa $tentativa/36: ainda subindo..."
+            sleep 5
+          done
+
+          echo "A aplicacao nao respondeu UP em 3 minutos."
+          echo "Ultimas linhas do log:"
+          sudo journalctl -u rota-vital -n 30 --no-pager || true
+          exit 1
+          REMOTO
+
+      - name: Confirmar que o Nginx esta encaminhando (pela URL publica)
+        if: steps.segredos.outputs.configurado == 'true'
+        run: |
+          # A aplicacao ja respondeu dentro da VM no passo anterior. Se esta
+          # verificacao falhar, o problema esta no proxy, nao na aplicacao.
+          resposta=$(curl -sf --max-time 10 \
+            "${{ env.URL_PUBLICA }}/actuator/health" || true)
+
+          if echo "$resposta" | grep -q '"status":"UP"'; then
+            echo "Acessivel pela URL publica: $resposta"
+            exit 0
+          fi
+
+          echo "::error::A aplicacao subiu na VM, mas nao responde pela URL publica."
+          echo "::error::O encaminhamento do Nginx provavelmente nao esta configurado."
+          echo "::error::Ver a secao 'Configurar o Nginx' em docs/deploy.md."
+          exit 1
+
+      - name: Confirmar que o console do H2 esta inacessivel
+        if: steps.segredos.outputs.configurado == 'true'
+        run: |
+          # Criterio de aceite da PI3-21. O perfil prod desliga o console, e
+          # aqui confirmamos que a decisao chegou ate a maquina, em vez de
+          # confiar que o arquivo certo foi carregado.
+          codigo=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
+            "${{ env.URL_PUBLICA }}/h2-console" || echo "000")
+
+          if [ "$codigo" = "200" ]; then
+            echo "::error::O console do H2 esta acessivel em producao."
+            exit 1
+          fi
+
+          echo "Console do H2 inacessivel (HTTP $codigo). Correto."

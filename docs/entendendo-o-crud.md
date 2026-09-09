@@ -20,7 +20,7 @@ A ordem aqui é a ordem em que uma requisição HTTP atravessa o sistema.
 8. [Serviços: onde moram as regras](#8-serviços-onde-moram-as-regras)
 9. [Controllers: só HTTP](#9-controllers-só-http)
 10. [Tratamento de erros](#10-tratamento-de-erros)
-11. [Os dois bugs que apareceram](#11-os-dois-bugs-que-apareceram)
+11. [Os três bugs que apareceram](#11-os-três-bugs-que-apareceram)
 12. [Glossário de anotações](#12-glossário-de-anotações)
 
 ---
@@ -803,7 +803,7 @@ O front-end consegue marcar exatamente o campo errado no formulário.
 
 ---
 
-## 11. Os dois bugs que apareceram
+## 11. Os três bugs que apareceram
 
 Esta seção existe porque errar e consertar ensina mais que acertar de primeira.
 
@@ -891,6 +891,87 @@ aconteceu.
 raciocínio sobre o domínio. É exatamente para isso que teste de integração
 serve. Um teste unitário com mock provavelmente teria passado, porque eu
 mesmo teria montado o mock com a suposição errada.
+
+### Bug 3: o que 46 testes verdes não pegaram
+
+Este apareceu depois, na PI3-21, e é o mais interessante dos três.
+
+**Sintoma:** `GET /api/v1/requisicoes` respondia **HTTP 500 em produção** e
+funcionava normalmente em desenvolvimento. Todos os testes passando.
+
+**Log:**
+
+```
+org.hibernate.LazyInitializationException: Cannot lazily initialize
+collection of role 'com.rotavital.dominio.Requisicao.itens'
+with key 'REQ00001' (no session)
+```
+
+**A causa.** Os controllers convertiam entidade em DTO:
+
+```java
+// RequisicaoController — como estava
+return requisicoes.listar(status, hospitalId, prioridade).stream()
+        .map(RequisicaoResponse::de)     // <- aqui
+        .toList();
+```
+
+O `@Transactional` do serviço termina quando o método do serviço retorna. O
+`.map()` roda **depois disso**, já no controller. E o `RequisicaoResponse.de()`
+percorre `requisicao.getItens()`, que é uma coleção carregada por demanda:
+o Hibernate só vai ao banco buscá-la quando alguém a acessa.
+
+Nesse instante a sessão já fechou. Não há como buscar. Exceção.
+
+**Por que só em produção?** Por causa de uma configuração chamada
+`spring.jpa.open-in-view`, que vem **ligada por padrão**. Ela mantém a sessão
+do banco aberta até a resposta HTTP terminar de ser escrita, o que faz o
+acesso tardio funcionar — disparando uma consulta invisível, fora de qualquer
+transação.
+
+No perfil de produção eu desliguei:
+
+```properties
+spring.jpa.open-in-view=false
+```
+
+E o bug, que sempre esteve lá, apareceu.
+
+**A correção:** converter para DTO **dentro** do serviço, com a transação
+ainda aberta.
+
+```java
+// RequisicaoServico — como ficou
+@Transactional(readOnly = true)
+public List<RequisicaoResponse> listar(...) {
+    return requisicoes.findAll().stream()
+            .filter(...)
+            .map(RequisicaoResponse::de)   // agora dentro da transação
+            .toList();
+}
+```
+
+O controller passou a só repassar o que recebe.
+
+**Três lições, e a terceira é a que interessa:**
+
+1. **`open-in-view` ligado esconde problema.** Ele é conveniente e por isso é
+   o padrão, mas transforma erro de arquitetura em consulta silenciosa. Muita
+   gente descobre isso quando o sistema fica lento e ninguém sabe por quê.
+
+2. **A conversão para DTO pertence ao serviço.** Ela toca as entidades, e
+   tocar entidade fora da transação é território de erro. O controller deve
+   receber DTO pronto.
+
+3. **Teste verde não é prova de que está certo.** Os 46 testes passavam porque
+   `@Transactional` na classe de teste mantém uma transação aberta durante o
+   método inteiro, incluindo a serialização. O ambiente de teste era mais
+   permissivo que o de produção, e o bug morava justamente nessa diferença.
+
+   O que pegou o erro não foi teste nenhum: foi rodar o jar de verdade, com o
+   perfil de verdade, e clicar nos endpoints. É por isso que a PI3-21 termina
+   com o workflow chamando `/actuator/health` e `/h2-console` na URL pública,
+   em vez de confiar que o build verde basta.
 
 ---
 

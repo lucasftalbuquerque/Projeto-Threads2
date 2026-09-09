@@ -1,8 +1,11 @@
 package com.rotavital.servico;
 
 import com.rotavital.api.dto.AlocacaoRequest;
+import com.rotavital.api.dto.AlocacaoResponse;
 import com.rotavital.api.dto.ItemRequisicaoRequest;
+import com.rotavital.api.dto.ItemRequisicaoResponse;
 import com.rotavital.api.dto.RequisicaoRequest;
+import com.rotavital.api.dto.RequisicaoResponse;
 import com.rotavital.dominio.Alocacao;
 import com.rotavital.dominio.Bolsa;
 import com.rotavital.dominio.Hospital;
@@ -42,23 +45,41 @@ public class RequisicaoServico {
     // Requisicao
     // -----------------------------------------------------------------------
 
+    /**
+     * Lista ja convertida para DTO.
+     *
+     * <p>A conversao acontece aqui dentro, e nao no controlador, porque
+     * {@code RequisicaoResponse} percorre a lista de itens. Essa lista e
+     * carregada por demanda: fora da transacao, o Hibernate ja fechou a sessao
+     * e o acesso lanca {@code LazyInitializationException}.</p>
+     */
     @Transactional(readOnly = true)
-    public List<Requisicao> listar(StatusRequisicao status, String hospitalId,
-                                   PrioridadeRequisicao prioridade) {
+    public List<RequisicaoResponse> listar(StatusRequisicao status, String hospitalId,
+                                           PrioridadeRequisicao prioridade) {
         return requisicoes.findAll().stream()
                 .filter(r -> status == null || r.getStatus() == status)
                 .filter(r -> prioridade == null || r.getPrioridade() == prioridade)
                 .filter(r -> hospitalId == null
                         || (r.getHospital() != null && hospitalId.equals(r.getHospital().getId())))
+                .map(RequisicaoResponse::de)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<Requisicao> listarPorHospital(String hospitalId, StatusRequisicao status) {
+    public List<RequisicaoResponse> listarPorHospital(String hospitalId, StatusRequisicao status) {
         hospitalServico.buscar(hospitalId);
         return listar(status, hospitalId, null);
     }
 
+    @Transactional(readOnly = true)
+    public RequisicaoResponse detalhar(String id) {
+        return RequisicaoResponse.de(buscar(id));
+    }
+
+    /**
+     * Devolve a entidade. Uso interno dos demais metodos deste servico, que ja
+     * rodam dentro de transacao. O controlador usa {@link #detalhar(String)}.
+     */
     @Transactional(readOnly = true)
     public Requisicao buscar(String id) {
         return requisicoes.findById(id)
@@ -66,7 +87,7 @@ public class RequisicaoServico {
     }
 
     @Transactional
-    public Requisicao criar(RequisicaoRequest dados) {
+    public RequisicaoResponse criar(RequisicaoRequest dados) {
         Hospital hospital = hospitalServico.buscar(dados.hospitalId());
 
         Requisicao requisicao = new Requisicao(
@@ -81,7 +102,7 @@ public class RequisicaoServico {
             requisicao.adicionarItem(novoItem(item));
         }
 
-        return requisicoes.save(requisicao);
+        return RequisicaoResponse.de(requisicoes.save(requisicao));
     }
 
     /**
@@ -90,7 +111,7 @@ public class RequisicaoServico {
      * deixaria o estado inconsistente com os itens.
      */
     @Transactional
-    public Requisicao atualizarStatus(String id, StatusRequisicao novoStatus) {
+    public RequisicaoResponse atualizarStatus(String id, StatusRequisicao novoStatus) {
         Requisicao requisicao = buscar(id);
 
         if (novoStatus != StatusRequisicao.CANCELADA) {
@@ -99,7 +120,7 @@ public class RequisicaoServico {
                     + "Os demais status derivam das alocacoes.");
         }
         if (requisicao.getStatus() == StatusRequisicao.CANCELADA) {
-            return requisicao;
+            return RequisicaoResponse.de(requisicao);
         }
 
         // O que impede o cancelamento nao e o status da requisicao, e o das
@@ -123,7 +144,7 @@ public class RequisicaoServico {
         }
 
         requisicao.setStatus(StatusRequisicao.CANCELADA);
-        return requisicoes.save(requisicao);
+        return RequisicaoResponse.de(requisicoes.save(requisicao));
     }
 
     // -----------------------------------------------------------------------
@@ -131,12 +152,14 @@ public class RequisicaoServico {
     // -----------------------------------------------------------------------
 
     @Transactional(readOnly = true)
-    public List<ItemRequisicao> listarItens(String requisicaoId) {
-        return buscar(requisicaoId).getItens();
+    public List<ItemRequisicaoResponse> listarItens(String requisicaoId) {
+        return buscar(requisicaoId).getItens().stream()
+                .map(ItemRequisicaoResponse::de)
+                .toList();
     }
 
     @Transactional
-    public ItemRequisicao adicionarItem(String requisicaoId, ItemRequisicaoRequest dados) {
+    public ItemRequisicaoResponse adicionarItem(String requisicaoId, ItemRequisicaoRequest dados) {
         Requisicao requisicao = buscar(requisicaoId);
         exigirRequisicaoAberta(requisicao);
 
@@ -144,7 +167,7 @@ public class RequisicaoServico {
         requisicao.adicionarItem(item);
         requisicao.recalcularStatus();
         requisicoes.save(requisicao);
-        return item;
+        return ItemRequisicaoResponse.de(item);
     }
 
     @Transactional
@@ -168,8 +191,10 @@ public class RequisicaoServico {
     // -----------------------------------------------------------------------
 
     @Transactional(readOnly = true)
-    public List<Alocacao> listarAlocacoes(String requisicaoId, String itemId) {
-        return itemDe(buscar(requisicaoId), itemId).getAlocacoes();
+    public List<AlocacaoResponse> listarAlocacoes(String requisicaoId, String itemId) {
+        return itemDe(buscar(requisicaoId), itemId).getAlocacoes().stream()
+                .map(AlocacaoResponse::de)
+                .toList();
     }
 
     /**
@@ -178,7 +203,7 @@ public class RequisicaoServico {
      * mesmo grupo, bolsa disponivel e dentro da validade.
      */
     @Transactional
-    public Alocacao alocar(String requisicaoId, String itemId, AlocacaoRequest dados) {
+    public AlocacaoResponse alocar(String requisicaoId, String itemId, AlocacaoRequest dados) {
         Requisicao requisicao = buscar(requisicaoId);
         exigirRequisicaoAberta(requisicao);
 
@@ -217,7 +242,7 @@ public class RequisicaoServico {
         requisicao.recalcularStatus();
         requisicoes.save(requisicao);
 
-        return alocacao;
+        return AlocacaoResponse.de(alocacao);
     }
 
     @Transactional

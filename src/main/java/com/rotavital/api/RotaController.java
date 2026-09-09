@@ -5,8 +5,6 @@ import com.rotavital.api.dto.BolsaResponse;
 import com.rotavital.api.dto.EmbarqueBolsaRequest;
 import com.rotavital.api.dto.RotaRequest;
 import com.rotavital.api.dto.RotaResponse;
-import com.rotavital.dominio.Bolsa;
-import com.rotavital.dominio.Rota;
 import com.rotavital.dominio.enums.StatusRota;
 import com.rotavital.servico.RotaServico;
 import jakarta.validation.Valid;
@@ -42,44 +40,40 @@ public class RotaController {
             @RequestParam(required = false) StatusRota status,
             @RequestParam(required = false) String hemocentroId,
             @RequestParam(required = false) String hospitalId) {
-        return rotas.listar(status, hemocentroId, hospitalId).stream()
-                .map(RotaResponse::de)
-                .toList();
+        return rotas.listar(status, hemocentroId, hospitalId);
     }
 
     @GetMapping("/{id}")
     public RotaResponse buscar(@PathVariable String id) {
-        return RotaResponse.de(rotas.buscar(id));
+        return rotas.detalhar(id);
     }
 
     @PostMapping
     public ResponseEntity<RotaResponse> criar(@Valid @RequestBody RotaRequest dados) {
-        Rota criada = rotas.criar(dados);
+        RotaResponse criada = rotas.criar(dados);
         return ResponseEntity
-                .created(URI.create("/api/v1/rotas/" + criada.getId()))
-                .body(RotaResponse.de(criada));
+                .created(URI.create("/api/v1/rotas/" + criada.id()))
+                .body(criada);
     }
 
     @PatchMapping("/{id}")
     public RotaResponse atualizarStatus(@PathVariable String id,
                                         @Valid @RequestBody AtualizarStatusRotaRequest dados) {
-        return RotaResponse.de(rotas.atualizarStatus(id, dados));
+        return rotas.atualizarStatus(id, dados);
     }
 
     @GetMapping("/{id}/bolsas")
     public List<BolsaResponse> listarBolsas(@PathVariable String id) {
-        return rotas.listarBolsas(id).stream()
-                .map(BolsaResponse::de)
-                .toList();
+        return rotas.listarBolsas(id);
     }
 
     @PostMapping("/{id}/bolsas")
     public ResponseEntity<BolsaResponse> embarcar(@PathVariable String id,
                                                   @Valid @RequestBody EmbarqueBolsaRequest dados) {
-        Bolsa bolsa = rotas.embarcar(id, dados);
+        BolsaResponse bolsa = rotas.embarcar(id, dados);
         return ResponseEntity
-                .created(URI.create("/api/v1/rotas/" + id + "/bolsas/" + bolsa.getCodigoRastreio()))
-                .body(BolsaResponse.de(bolsa));
+                .created(URI.create("/api/v1/rotas/" + id + "/bolsas/" + bolsa.id()))
+                .body(bolsa);
     }
 
     @DeleteMapping("/{id}/bolsas/{bolsaId}")

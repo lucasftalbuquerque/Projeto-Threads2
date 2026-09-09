@@ -102,8 +102,6 @@ public class HemocentroController {
     public List<RotaResponse> rotasDoHemocentro(
             @PathVariable String id,
             @RequestParam(required = false) StatusRota status) {
-        return rotas.listarPorHemocentro(id, status).stream()
-                .map(RotaResponse::de)
-                .toList();
+        return rotas.listarPorHemocentro(id, status);
     }
 }
