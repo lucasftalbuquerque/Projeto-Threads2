@@ -74,8 +74,8 @@ if ss -tln 2>/dev/null | grep -qE "[:.]${PORTA}[[:space:]]"; then
     erro "Escolha outra porta livre e ajuste nos TRES lugares:"
     erro "  1. PORTA, no topo deste script"
     erro "  2. server.port, em src/main/resources/application-prod.properties"
-    erro "  3. PORTA_APP, em .github/workflows/ci.yml"
-    erro "Os tres precisam bater, senao o deploy publica e a verificacao falha."
+    erro "  3. proxy_pass, em infra/nginx-rota-vital.conf"
+    erro "Os tres precisam bater, senao o Nginx encaminha para o vazio."
     exit 1
 fi
 info "Porta ${PORTA} livre."
@@ -128,11 +128,26 @@ fi
 
 # Caminho absoluto do Java 21, para o servico nao depender do que estiver no
 # PATH nem de uma eventual troca do java padrao da maquina.
-JAVA_BIN=$(find /usr/lib/jvm -maxdepth 2 -type f -path "*${VERSAO_JAVA}*/bin/java" 2>/dev/null | head -1)
+# O binario fica em /usr/lib/jvm/java-21-openjdk-amd64/bin/java, ou seja, tres
+# niveis abaixo de /usr/lib/jvm. Um -maxdepth menor nao encontra nada.
+JAVA_BIN=$(find /usr/lib/jvm -maxdepth 3 -type f -name java -path "*${VERSAO_JAVA}*" 2>/dev/null | head -1)
+
+# Segunda tentativa: resolve a cadeia de links a partir do java do PATH.
+# /usr/bin/java aponta para /etc/alternatives/java, que aponta para o binario
+# real. readlink -f percorre tudo e devolve o destino final.
+if [ -z "$JAVA_BIN" ] && command -v java >/dev/null 2>&1; then
+    CANDIDATO=$(readlink -f "$(command -v java)")
+    if "$CANDIDATO" -version 2>&1 | grep -q "version \"${VERSAO_JAVA}"; then
+        JAVA_BIN="$CANDIDATO"
+    fi
+fi
+
 if [ -z "$JAVA_BIN" ]; then
     JAVA_BIN=$(command -v java)
     aviso "Nao localizei o binario especifico do Java ${VERSAO_JAVA}."
     aviso "Usando o java do PATH: ${JAVA_BIN}"
+    aviso "Funciona, mas /usr/bin/java e gerenciado pelo update-alternatives:"
+    aviso "instalar outra versao na maquina pode mudar para onde ele aponta."
 fi
 info "O servico vai usar: ${JAVA_BIN}"
 
@@ -329,9 +344,12 @@ fi
 info "Provisionamento concluido. Nenhum outro servico foi alterado."
 echo
 echo "Falta:"
-echo "  1. Liberar a porta ${PORTA} no firewall do GCP (ver docs/deploy.md)"
+echo "  1. Instalar o site no Nginx e emitir o certificado (ver docs/deploy.md)"
 echo "  2. Cadastrar os segredos no GitHub: VM_HOST, VM_USUARIO, VM_CHAVE_SSH"
 echo "  3. Dar push na main para o pipeline publicar"
+echo
+echo "Firewall: nada a fazer. A aplicacao escuta em 127.0.0.1:${PORTA} e so e"
+echo "alcancavel pelo Nginx, que ja atende as portas 80 e 443."
 echo
 echo "Comandos uteis:"
 echo "  sudo systemctl status rota-vital        estado do servico"
