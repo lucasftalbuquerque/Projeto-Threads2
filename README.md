@@ -80,7 +80,6 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 | Artefato | Link |
 |---|---|
 | **Aplicação no ar** | [rsc3-rotavital.duckdns.org](https://rsc3-rotavital.duckdns.org/api/v1/hemocentros) |
-| Guia do projeto (do domínio à URL no ar) | [docs/entendendo-o-rota-vital.md](docs/entendendo-o-rota-vital.md) |
 | Pipeline e deploy | [docs/deploy.md](docs/deploy.md) |
 
 **Screenshots:** _(a preencher)_
@@ -209,6 +208,14 @@ e [docs/deploy.md](docs/deploy.md).
 
 > Rodando localmente com o perfil `prod`, a aplicação responde em
 > `http://localhost:8081`, não na 8080.
+
+## Documentação técnica
+
+Material de apoio, não exigido pelas entregas:
+
+| Documento | O que cobre |
+|---|---|
+| [docs/entendendo-o-rota-vital.md](docs/entendendo-o-rota-vital.md) | guia comentado do código, do modelo de domínio ao deploy |
 
 ## Equipe
 
