@@ -79,7 +79,8 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 
 | Artefato | Link |
 |---|---|
-| Guia do CRUD (decisões de JPA e arquitetura) | [docs/entendendo-o-crud.md](docs/entendendo-o-crud.md) |
+| **Aplicação no ar** | [rsc3-rotavital.duckdns.org](https://rsc3-rotavital.duckdns.org/api/v1/hemocentros) |
+| Guia do projeto (do domínio à URL no ar) | [docs/entendendo-o-rota-vital.md](docs/entendendo-o-rota-vital.md) |
 | Pipeline e deploy | [docs/deploy.md](docs/deploy.md) |
 
 **Screenshots:** _(a preencher)_
@@ -127,7 +128,22 @@ seguintes sobem em poucos segundos.
 
 A aplicação fica disponível em `http://localhost:8080`.
 
-### Endpoints disponíveis
+### Aplicação em produção
+
+A API está no ar, publicada automaticamente a cada push na `main`:
+
+| URL | O que é |
+|---|---|
+| [`/actuator/health`](https://rsc3-rotavital.duckdns.org/actuator/health) | estado da aplicação |
+| [`/api/v1/hemocentros`](https://rsc3-rotavital.duckdns.org/api/v1/hemocentros) | os hemocentros da carga inicial |
+| [`/api/v1/bolsas`](https://rsc3-rotavital.duckdns.org/api/v1/bolsas) | o estoque |
+
+Base: `https://rsc3-rotavital.duckdns.org`
+
+O pipeline está em [.github/workflows/ci.yml](.github/workflows/ci.yml) e o
+processo em [docs/deploy.md](docs/deploy.md).
+
+### Endpoints disponíveis (execução local)
 
 | URL | O que é |
 |---|---|
