@@ -142,4 +142,21 @@ class CarregadorMalhaTest {
         assertEquals(List.of("HC01", "HC04", "HC09", "HC12"), rota.caminho());
         assertEquals(50.1, rota.custoTotal(), 0.1);
     }
+    /**
+     * Id fora da faixa HC01 a HC12, como um codigo digitado errado na
+     * requisicao: a consulta devolve resposta tratada em vez de excecao,
+     * criterio de aceite da PI3-19.
+     */
+    @Test
+    void rotaAteIdInexistenteNaMalhaDevolveRespostaTratada() {
+        Grafo<String> malha = CarregadorMalha.carregar();
+
+        ResultadoRota<String> rota = new Dijkstra<>(malha).calcularRota("HC01", "HC99");
+
+        assertFalse(malha.listarVertices().contains("HC99"));
+        assertFalse(rota.alcancavel());
+        assertTrue(rota.caminho().isEmpty());
+        assertEquals(0.0, rota.custoTotal());
+        assertEquals(ResultadoRota.semCaminho(), rota);
+    }
 }
