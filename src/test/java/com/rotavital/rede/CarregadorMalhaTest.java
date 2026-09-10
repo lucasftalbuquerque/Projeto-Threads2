@@ -2,8 +2,10 @@ package com.rotavital.rede;
 
 import com.rotavital.estruturas.Dijkstra;
 import com.rotavital.estruturas.Grafo;
+import com.rotavital.estruturas.ResultadoRota;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -110,5 +112,34 @@ class CarregadorMalhaTest {
         Map<String, Double> distancias = new Dijkstra<>(grafo).calcularDistancias("HC01");
 
         assertEquals(50.1, distancias.get("HC12"), 0.1);
+    }
+    /**
+     * Na malha real, o desvio mais rapido que a aresta direta aparece tambem
+     * na rota reconstruida: HEMOPE -> GSH Hemato -> IMIP.
+     */
+    @Test
+    void rotaDeHc01AteHc05PassaPorHc02() {
+        Grafo<String> grafo = CarregadorMalha.carregar();
+
+        ResultadoRota<String> rota = new Dijkstra<>(grafo).calcularRota("HC01", "HC05");
+
+        assertTrue(rota.alcancavel());
+        assertEquals(List.of("HC01", "HC02", "HC05"), rota.caminho());
+        assertEquals(5.9, rota.custoTotal(), 0.1);
+    }
+
+    /**
+     * Travessia Recife -> Jaboatao: a rota sai do HEMOPE, passa pelo Real
+     * Portugues e por Nossa Senhora de Lourdes antes de chegar ao Memorial.
+     */
+    @Test
+    void rotaDeHc01AteHc12AtravessaRecifeEJaboatao() {
+        Grafo<String> grafo = CarregadorMalha.carregar();
+
+        ResultadoRota<String> rota = new Dijkstra<>(grafo).calcularRota("HC01", "HC12");
+
+        assertTrue(rota.alcancavel());
+        assertEquals(List.of("HC01", "HC04", "HC09", "HC12"), rota.caminho());
+        assertEquals(50.1, rota.custoTotal(), 0.1);
     }
 }

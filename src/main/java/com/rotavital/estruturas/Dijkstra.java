@@ -1,8 +1,11 @@
 package com.rotavital.estruturas;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
@@ -56,10 +59,71 @@ public class Dijkstra<T> {
      *         origem for nula ou nao existir no grafo, sem lancar excecao
      */
     public Map<T, Double> calcularDistancias(T origem) {
+        return percorrer(origem).distancias();
+    }
+
+    /**
+     * Caminho minimo da origem ate o destino, com os vertices percorridos.
+     *
+     * <p>Roda a mesma travessia do {@link #calcularDistancias(Object)} e
+     * reconstroi o caminho voltando do destino pelos predecessores ate a
+     * origem, invertendo a lista no fim. Guardar o predecessor de cada vertice
+     * custa O(V) de memoria e evita ter de reprocessar o grafo para descobrir
+     * por onde a rota passou.</p>
+     *
+     * <p><b>Complexidade:</b> O((V + E) log V), a mesma da travessia. A
+     * reconstrucao e O(V) e nao altera a ordem de grandeza.</p>
+     *
+     * @param origem  vertice de partida
+     * @param destino vertice de chegada
+     * @return a rota encontrada; {@link ResultadoRota#semCaminho()} se origem
+     *         ou destino forem nulos, nao existirem no grafo, ou se nao houver
+     *         caminho entre eles. Origem igual ao destino devolve um caminho de
+     *         um unico vertice e custo zero
+     */
+    public ResultadoRota<T> calcularRota(T origem, T destino) {
+        if (origem == null || destino == null) {
+            return ResultadoRota.semCaminho();
+        }
+
+        Travessia<T> travessia = percorrer(origem);
+        Double custo = travessia.distancias().get(destino);
+
+        // Ausencia no mapa de distancias e o proprio sinal de inalcancavel,
+        // entao a checagem de existencia do destino vem de graca aqui.
+        if (custo == null) {
+            return ResultadoRota.semCaminho();
+        }
+
+        List<T> caminho = new ArrayList<>();
+        for (T atual = destino; atual != null; atual = travessia.predecessores().get(atual)) {
+            caminho.add(atual);
+        }
+        Collections.reverse(caminho);
+
+        return ResultadoRota.alcancado(caminho, custo);
+    }
+
+    /**
+     * Executa o Dijkstra a partir da origem, produzindo as distancias minimas
+     * e o predecessor de cada vertice alcancado.
+     *
+     * <p>E o unico lugar onde o algoritmo existe: tanto
+     * {@link #calcularDistancias(Object)} quanto
+     * {@link #calcularRota(Object, Object)} consomem este metodo, cada um
+     * usando a parte do resultado que lhe interessa. Duplicar o laco para
+     * acrescentar predecessores abriria espaco para as duas copias divergirem
+     * com o tempo.</p>
+     *
+     * <p>Se a origem for nula ou nao existir no grafo, devolve os dois mapas
+     * vazios, sem lancar excecao.</p>
+     */
+    private Travessia<T> percorrer(T origem) {
         Map<T, Double> distancias = new HashMap<>();
+        Map<T, T> predecessores = new HashMap<>();
 
         if (origem == null || !grafo.listarVertices().contains(origem)) {
-            return distancias;
+            return new Travessia<>(distancias, predecessores);
         }
 
         // Vertices ja fechados: a menor distancia deles e definitiva.
@@ -92,12 +156,15 @@ public class Dijkstra<T> {
 
                 if (conhecida == null || candidata < conhecida) {
                     distancias.put(destino, candidata);
+                    // O predecessor acompanha a distancia: so muda quando o
+                    // caminho ate o destino de fato melhorou.
+                    predecessores.put(destino, atual.vertice());
                     fila.add(new Candidato<>(destino, candidata));
                 }
             }
         }
 
-        return distancias;
+        return new Travessia<>(distancias, predecessores);
     }
 
     /**
@@ -105,5 +172,16 @@ public class Dijkstra<T> {
      * o colocou nessa posicao.
      */
     private record Candidato<V>(V vertice, double distancia) {
+    }
+
+    /**
+     * Resultado bruto de uma travessia: distancia minima conhecida de cada
+     * vertice alcancado e de qual vertice se chegou nele.
+     *
+     * <p>A origem aparece em {@code distancias} com zero e nao aparece em
+     * {@code predecessores}, o que encerra naturalmente a reconstrucao do
+     * caminho.</p>
+     */
+    private record Travessia<V>(Map<V, Double> distancias, Map<V, V> predecessores) {
     }
 }

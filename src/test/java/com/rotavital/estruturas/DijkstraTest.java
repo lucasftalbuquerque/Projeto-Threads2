@@ -2,6 +2,7 @@ package com.rotavital.estruturas;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -82,5 +83,53 @@ class DijkstraTest {
 
         assertTrue(dijkstra.calcularDistancias("Hospital Fantasma").isEmpty());
         assertTrue(dijkstra.calcularDistancias(null).isEmpty());
+    }
+    /**
+     * A reconstrucao tem de devolver o caminho inteiro na ordem do percurso,
+     * nao so o custo: e por onde o veiculo passa que interessa para despachar
+     * a entrega.
+     */
+    @Test
+    void rotaAteODestinoPassaPorHospitalAEHospitalB() {
+        Dijkstra<String> dijkstra = new Dijkstra<>(redeDeExemplo());
+
+        ResultadoRota<String> rota = dijkstra.calcularRota("Hemocentro", "Hospital Destino");
+
+        assertTrue(rota.alcancavel());
+        assertEquals(List.of("Hemocentro", "Hospital A", "Hospital B", "Hospital Destino"),
+                rota.caminho());
+        assertEquals(23.0, rota.custoTotal());
+    }
+
+    /**
+     * Origem igual ao destino e caminho de um vertice so, custo zero. Sai
+     * naturalmente da reconstrucao: a origem nao tem predecessor.
+     */
+    @Test
+    void rotaDaOrigemParaElaMesmaTemUmUnicoVertice() {
+        Dijkstra<String> dijkstra = new Dijkstra<>(redeDeExemplo());
+
+        ResultadoRota<String> rota = dijkstra.calcularRota("Hemocentro", "Hemocentro");
+
+        assertTrue(rota.alcancavel());
+        assertEquals(List.of("Hemocentro"), rota.caminho());
+        assertEquals(0.0, rota.custoTotal());
+    }
+
+    /**
+     * Sem caminho ate o destino, o resultado e vazio e nao nulo: quem consome
+     * checa {@code alcancavel()} em vez de se defender de ponteiro nulo.
+     */
+    @Test
+    void rotaAteVerticeIsoladoNaoEhAlcancavel() {
+        Grafo<String> grafo = redeDeExemplo();
+        grafo.inserirVertice("Hospital Isolado");
+
+        ResultadoRota<String> rota = new Dijkstra<>(grafo)
+                .calcularRota("Hemocentro", "Hospital Isolado");
+
+        assertFalse(rota.alcancavel());
+        assertTrue(rota.caminho().isEmpty());
+        assertEquals(0.0, rota.custoTotal());
     }
 }
