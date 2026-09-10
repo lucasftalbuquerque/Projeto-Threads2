@@ -1,0 +1,159 @@
+<mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="940" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <mxCell id="title" value="Rota Vital &#8212; Arquitetura de Rede (PI3-22 &#183; W06): implementado x projetado" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="8" width="1420" height="30" as="geometry" />
+    </mxCell>
+
+    <mxCell id="subtitle" value="Atualizado a partir do que o deploy da PI3-21 efetivamente colocou no ar. Ressalva: telemetria de temperatura/GPS e simulada; compatibilidade ABO/Rh e didatica, nao substitui protocolo clinico real." style="text;html=1;align=center;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+      <mxGeometry x="40" y="38" width="1420" height="30" as="geometry" />
+    </mxCell>
+
+    <mxCell id="implContainer" value="IMPLEMENTADO &#8212; em producao desde a PI3-21" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;align=left;fontSize=14;fontStyle=1;spacingLeft=10;spacingTop=8;" vertex="1" parent="1">
+      <mxGeometry x="40" y="80" width="680" height="700" as="geometry" />
+    </mxCell>
+
+    <mxCell id="targetContainer" value="PROJETADO &#8212; arquitetura-alvo (nao implementada)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;verticalAlign=top;align=left;fontSize=14;fontStyle=1;spacingLeft=10;spacingTop=8;" vertex="1" parent="1">
+      <mxGeometry x="780" y="80" width="680" height="700" as="geometry" />
+    </mxCell>
+
+    <mxCell id="internet_real" value="INTERNET" style="rounded=0;whiteSpace=wrap;html=1;shape=cloud;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="280" y="110" width="160" height="50" as="geometry" />
+    </mxCell>
+
+    <mxCell id="vm_box" value="VM compartilhada (GCP us-west1-a) &#8212; &#9888; SPOF: hospeda Nginx + Rota Vital" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;strokeWidth=2;verticalAlign=top;align=left;fontSize=12;fontStyle=1;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+      <mxGeometry x="90" y="210" width="580" height="550" as="geometry" />
+    </mxCell>
+
+    <mxCell id="nginx_real" value="Nginx (pre-existente)&lt;br&gt;reverse proxy + Certbot (HTTPS)&lt;br&gt;roteia por dominio&lt;br&gt;&#9888; SPOF: unico ponto de entrada" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;strokeWidth=2;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="130" y="270" width="230" height="90" as="geometry" />
+    </mxCell>
+
+    <mxCell id="rotavital_real" value="Rota Vital (Spring Boot)&lt;br&gt;127.0.0.1:8081 (loopback)&lt;br&gt;usuario systemd &quot;rotavital&quot;&lt;br&gt;ProtectSystem=strict &#183; NoNewPrivileges&lt;br&gt;&#9888; SPOF: instancia unica" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;strokeWidth=2;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="410" y="390" width="260" height="110" as="geometry" />
+    </mxCell>
+
+    <mxCell id="h2_real" value="H2 (em memoria)&lt;br&gt;embutido no processo&lt;br&gt;&#9888; SPOF de dados: reinicio = perda" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#ffffff;strokeColor=#b85450;strokeWidth=2;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="460" y="520" width="180" height="80" as="geometry" />
+    </mxCell>
+
+    <mxCell id="cicd_real" value="GitHub Actions (CI/CD)&lt;br&gt;build &#8594; teste &#8594; empacotar &#8594; deploy&lt;br&gt;segredos em GitHub Secrets&lt;br&gt;(nada versionado no repositorio)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="130" y="620" width="280" height="100" as="geometry" />
+    </mxCell>
+
+    <mxCell id="domain_note" value="Dominio: rsc3-rotavital.duckdns.org &#183; IP externo efemero salvo reserva estatica &#9888;" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#666666;" vertex="1" parent="1">
+      <mxGeometry x="130" y="725" width="530" height="20" as="geometry" />
+    </mxCell>
+
+    <mxCell id="internet_target" value="INTERNET" style="rounded=0;whiteSpace=wrap;html=1;shape=cloud;fillColor=#f5f5f5;strokeColor=#999999;fontSize=13;fontStyle=1;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="1020" y="110" width="160" height="50" as="geometry" />
+    </mxCell>
+
+    <mxCell id="lb_target" value="Load Balancer (Nginx)&lt;br&gt;multiplas instancias&lt;br&gt;(hoje: 1 Nginx sem balanceamento)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="830" y="200" width="200" height="70" as="geometry" />
+    </mxCell>
+
+    <mxCell id="api_target" value="API Backend (Spring Boot)&lt;br&gt;multiplas replicas &#8212; expoe /api/v1&lt;br&gt;(hoje: instancia unica, sem replicas)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="830" y="320" width="230" height="100" as="geometry" />
+    </mxCell>
+
+    <mxCell id="rabbitmq_target" value="RabbitMQ&lt;br&gt;(nao implementado)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="1100" y="330" width="150" height="60" as="geometry" />
+    </mxCell>
+
+    <mxCell id="worker_target" value="Worker Notifica&lt;br&gt;(nao implementado)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="1290" y="320" width="170" height="100" as="geometry" />
+    </mxCell>
+
+    <mxCell id="postgres_target" value="PostgreSQL&lt;br&gt;previsto para a Entrega 02" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="850" y="460" width="170" height="80" as="geometry" />
+    </mxCell>
+
+    <mxCell id="redis_target" value="Redis&lt;br&gt;(nao implementado)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="1100" y="460" width="150" height="80" as="geometry" />
+    </mxCell>
+
+    <mxCell id="natgw_target" value="NAT Gateway&lt;br&gt;(nao implementado)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="1290" y="460" width="170" height="60" as="geometry" />
+    </mxCell>
+
+    <mxCell id="mail_target" value="Servidor de e-mail (externo)&lt;br&gt;(nao implementado)" style="rounded=0;whiteSpace=wrap;html=1;shape=cloud;fillColor=#f5f5f5;strokeColor=#999999;fontSize=11;fontStyle=1;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="1280" y="560" width="180" height="60" as="geometry" />
+    </mxCell>
+
+    <mxCell id="telemetria_target" value="Telemetria simulada &#8212; HU-07&lt;br&gt;Sensor de temperatura/GPS (simulado)&lt;br&gt;&#8594; leitura periodica &#8594; API (contrato a definir)&lt;br&gt;Depende de PI3-30 (concorrencia)&lt;br&gt;&#9888; Nao implementado: nenhum campo de&lt;br&gt;temperatura/GPS existe hoje no dominio" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+      <mxGeometry x="850" y="600" width="350" height="150" as="geometry" />
+    </mxCell>
+
+    <mxCell id="legend" value="LEGENDA&lt;br&gt;Verde solido = implementado, dentro do escopo do Rota Vital (confirmado pelo deploy da PI3-21)&lt;br&gt;Cinza tracejado = arquitetura-alvo/projetada, ainda nao implementada&lt;br&gt;Borda vermelha + &#9888; = ponto unico de falha (SPOF) identificado&lt;br&gt;Seta azul tracejada = evolucao planejada (do real para o alvo)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;verticalAlign=top;fontSize=11;spacingLeft=10;spacingTop=6;" vertex="1" parent="1">
+      <mxGeometry x="40" y="800" width="1420" height="100" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e1" value="HTTPS/443 (Certbot)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#333333;fontSize=11;fontColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="internet_real" target="nginx_real">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e3" value="HTTP/8081 (proxy_pass)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#333333;fontSize=11;fontColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="nginx_real" target="rotavital_real">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e4" value="JDBC (mesma JVM)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#333333;fontSize=11;fontColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rotavital_real" target="h2_real">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e5" value="SCP + SSH (systemd restart)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#31708f;fontSize=11;fontColor=#31708f;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="cicd_real" target="rotavital_real">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e6" value="HTTPS/443" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#999999;dashed=1;fontSize=11;fontColor=#666666;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="internet_target" target="lb_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e7" value="HTTP" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#999999;dashed=1;fontSize=11;fontColor=#666666;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="lb_target" target="api_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e8" value="AMQP/5672 (assincrono)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#999999;dashed=1;fontSize=11;fontColor=#666666;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="api_target" target="rabbitmq_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e9" value="AMQP/5672" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#999999;dashed=1;fontSize=11;fontColor=#666666;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rabbitmq_target" target="worker_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e10" value="TCP/5432" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#999999;dashed=1;fontSize=11;fontColor=#666666;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="api_target" target="postgres_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e11" value="TCP/6379" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#999999;dashed=1;fontSize=11;fontColor=#666666;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="api_target" target="redis_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e12" value="SMTP/587" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#999999;dashed=1;fontSize=11;fontColor=#666666;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="worker_target" target="natgw_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e13" value="HTTPS/443 (via NAT)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#999999;dashed=1;fontSize=11;fontColor=#666666;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="natgw_target" target="mail_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e14" value="contrato a definir" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#999999;dashed=1;fontSize=11;fontColor=#666666;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="telemetria_target" target="api_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e15" value="migracao prevista" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#6c8ebf;dashed=1;fontSize=11;fontColor=#6c8ebf;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="h2_real" target="postgres_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e16" value="evolucao: balanceamento real" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#6c8ebf;dashed=1;fontSize=11;fontColor=#6c8ebf;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="nginx_real" target="lb_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <mxCell id="e17" value="escalar horizontalmente" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#6c8ebf;dashed=1;fontSize=11;fontColor=#6c8ebf;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rotavital_real" target="api_target">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+  </root>
+</mxGraphModel>
