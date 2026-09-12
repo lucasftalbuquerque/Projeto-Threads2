@@ -7,6 +7,7 @@ import com.rotavital.api.dto.RotaRequest;
 import com.rotavital.api.dto.RotaResponse;
 import com.rotavital.dominio.enums.StatusRota;
 import com.rotavital.servico.RotaServico;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,6 +26,7 @@ import java.util.List;
 /**
  * Endpoints de rota, conforme a secao 2.5 do contrato_api.md.
  */
+@Tag(name = "Rotas")
 @RestController
 @RequestMapping("/api/v1/rotas")
 public class RotaController {

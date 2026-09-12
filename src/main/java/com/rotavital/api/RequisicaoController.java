@@ -10,6 +10,7 @@ import com.rotavital.api.dto.RequisicaoResponse;
 import com.rotavital.dominio.enums.PrioridadeRequisicao;
 import com.rotavital.dominio.enums.StatusRequisicao;
 import com.rotavital.servico.RequisicaoServico;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,6 +33,7 @@ import java.util.List;
  * <p>Item e alocacao sao sub-recursos: so existem dentro de uma requisicao,
  * por isso a URL aninhada em vez de {@code /api/v1/itens}.</p>
  */
+@Tag(name = "Requisições")
 @RestController
 @RequestMapping("/api/v1/requisicoes")
 public class RequisicaoController {

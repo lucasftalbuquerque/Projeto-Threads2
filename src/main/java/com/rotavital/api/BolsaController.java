@@ -8,6 +8,7 @@ import com.rotavital.dominio.enums.GrupoSanguineo;
 import com.rotavital.dominio.enums.StatusBolsa;
 import com.rotavital.dominio.enums.TipoHemocomponente;
 import com.rotavital.servico.BolsaServico;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,6 +30,7 @@ import java.util.List;
  * <p>Nao ha PUT: bolsa nao se edita por inteiro. O que muda ao longo da vida
  * dela e o status, e para isso existe o PATCH.</p>
  */
+@Tag(name = "Bolsas")
 @RestController
 @RequestMapping("/api/v1/bolsas")
 public class BolsaController {

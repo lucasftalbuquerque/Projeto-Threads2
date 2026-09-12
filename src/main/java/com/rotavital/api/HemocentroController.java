@@ -12,6 +12,7 @@ import com.rotavital.dominio.enums.TipoHemocomponente;
 import com.rotavital.servico.BolsaServico;
 import com.rotavital.servico.HemocentroServico;
 import com.rotavital.servico.RotaServico;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -33,6 +34,7 @@ import java.util.List;
  * <p>O controlador so cuida de HTTP: le parametro, chama o servico e escolhe
  * o codigo de resposta. Regra de negocio nenhuma mora aqui.</p>
  */
+@Tag(name = "Hemocentros")
 @RestController
 @RequestMapping("/api/v1/hemocentros")
 public class HemocentroController {
