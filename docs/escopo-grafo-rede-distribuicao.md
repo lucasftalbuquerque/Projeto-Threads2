@@ -95,3 +95,94 @@ O caminho de menor custo passa por Hospital A e Hospital B mesmo parecendo um de
 ## Fora de escopo
 
 - Implementação do algoritmo (PI3-17 e PI3-19)
+
+---
+
+## Da modelagem à execução (PI3-57 a PI3-61)
+
+As decisões acima foram implementadas e integradas: o `ServicoAlocacaoRota`
+(pacote `com.rotavital.alocacao`) transforma uma requisição em bolsa + rota em
+uma única chamada — levanta as candidatas por unidade, roda o Dijkstra a
+partir da solicitante, descarta as inalcançáveis, escolhe por FEFO e devolve a
+bolsa com o caminho e o tempo total (PI3-58). Esta seção registra as regras
+que completam a modelagem.
+
+### Regra de desempate
+
+| Onde | Regra | Por quê |
+|---|---|---|
+| Seleção FEFO | 1º menor `dataValidade`; 2º menor `codigoRastreio` | O critério secundário torna o resultado determinístico: duas bolsas com a mesma validade sempre resolvem para a mesma escolha, em qualquer execução e em qualquer ordem de montagem do estoque (verificado em 100 execuções no `CriteriosAceiteAlocacaoTest`) |
+| Geração da malha | vizinhos por menor distância; empate por menor `id` | Mantém a malha reproduzível: as arestas geradas são sempre as mesmas |
+
+A regra FEFO vive em um único lugar — a `FilaPrioridadeFefo` — e é reusada
+pela `SelecaoFefo` e pelo `ServicoAlocacaoRota`, para que as ordens nunca
+divirjam.
+
+### Motivos de falha (PI3-57)
+
+Quando não há bolsa para entregar, a resposta carrega um motivo distinguível
+(`MotivoFalhaAlocacao`) em vez de exceção. Os motivos são avaliados nesta
+ordem, e vale o primeiro que ocorrer:
+
+| Motivo | Significado |
+|---|---|
+| `SEM_ESTOQUE` | nenhuma unidade tem bolsa da combinação grupo + componente, nem sequer vencida |
+| `TODAS_VENCIDAS` | existem bolsas da combinação, mas nenhuma alocável na data de referência (vencidas ou fora do status `DISPONIVEL`) |
+| `SEM_CAMINHO` | existem bolsas alocáveis, mas todas em unidades sem caminho a partir da solicitante (inclui solicitante fora da malha) |
+
+A ordem importa: estoque → validade → alcance. Uma bolsa vencida em unidade
+alcançável e uma válida em unidade isolada resultam em `SEM_CAMINHO`, porque
+bolsa alocável existe — o que barra é o caminho.
+
+### Complexidade da chamada integrada
+
+Para B bolsas no estoque, V unidades e E arestas:
+
+| Passo | Custo |
+|---|---:|
+| Levantar e filtrar candidatas | O(B) |
+| Dijkstra (heap binário) + reconstrução da rota | O((V + E) log V) |
+| Fila FEFO das alcançáveis | O(B log B) pior caso |
+| **Total por chamada** | **O(B log B + (V + E) log V)** |
+
+### Tempos medidos (PI3-60)
+
+Medição sobre a malha real das 12 unidades com a massa da carga inicial
+(100 bolsas, semente 42), média de 200 execuções após 50 de aquecimento
+descartadas, origem e combinação girando a cada execução
+(`MedicaoDesempenhoTest`):
+
+| Operação | Média por chamada |
+|---|---:|
+| Dijkstra (`calcularDistancias`) | ~11,5 µs |
+| Alocação completa (`alocar`: candidatas + Dijkstra + filtro + FEFO + rota) | ~17,1 µs |
+
+Medido em um MacBook (Apple Silicon, OpenJDK 26); os valores variam por
+máquina e servem como ordem de grandeza — microssegundos, folga de sobra para
+a operação. Para reproduzir: `./mvnw test -Dtest=MedicaoDesempenhoTest`
+(os números saem no log do teste).
+
+### Demonstração ponta a ponta (PI3-61)
+
+```bash
+./mvnw test -Dtest=DemoPontaAPontaTest
+```
+
+A demo carrega a malha real, monta um estoque de exemplo e mostra as quatro
+saídas possíveis — a alocação com bolsa, caminho e tempo, e os três motivos de
+falha. Saída de uma execução real:
+
+```
+Solicitante: HC06 (Hospital das Clínicas UFPE)
+
+1) O- hemacias  -> bolsa BOLDEMO02 (validade 2026-09-19) em HC08 (Hemolab Laboratório)
+   caminho: HC06 (Hospital das Clínicas UFPE) -> HC01 (Hemocentro Recife (HEMOPE)) -> HC08 (Hemolab Laboratório) | tempo total: 57.5 min
+2) AB- crio     -> SEM_ESTOQUE (nenhuma bolsa da combinacao na rede)
+3) A+ plaquetas -> TODAS_VENCIDAS (existe bolsa, mas nenhuma alocavel)
+4) B- plasma    -> SEM_CAMINHO (bolsa valida, porem em unidade sem ligacao)
+```
+
+Os critérios de aceite da integração têm um teste cada no
+`CriteriosAceiteAlocacaoTest` (PI3-59): o caminho de 23 minutos deste
+documento, FEFO vencendo proximidade, vencida ignorada, empate estável em 100
+execuções, sem caminho e sem estoque.
