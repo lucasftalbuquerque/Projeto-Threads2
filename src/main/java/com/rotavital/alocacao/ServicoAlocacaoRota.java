@@ -44,6 +44,13 @@ import java.util.Map;
  * a alocacao (reservar a bolsa, criar a {@code Alocacao}) e papel da camada de
  * servico JPA, fora deste escopo.</p>
  *
+ * <p><b>Thread-safety:</b> depois de construido o servico nao tem estado
+ * mutavel proprio e pode ser compartilhado entre threads. A unica ressalva e
+ * o status das bolsas, que sao referencias vivas: quem alterar status em
+ * paralelo a uma chamada ve a leitura da chamada em curso, como em qualquer
+ * consulta sobre dado compartilhado. A malha recebida nao deve ser alterada
+ * apos a construcao.</p>
+ *
  * <p>A busca e por grupo sanguineo identico, sem tabela de compatibilidade
  * ABO/Rh - mesma decisao ja registrada na {@link SelecaoFefo}.</p>
  *
