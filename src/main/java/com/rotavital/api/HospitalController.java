@@ -7,6 +7,7 @@ import com.rotavital.dominio.Hospital;
 import com.rotavital.dominio.enums.StatusRequisicao;
 import com.rotavital.servico.HospitalServico;
 import com.rotavital.servico.RequisicaoServico;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,6 +26,7 @@ import java.util.List;
 /**
  * Endpoints de hospital, conforme a secao 2.2 do contrato_api.md.
  */
+@Tag(name = "Hospitais")
 @RestController
 @RequestMapping("/api/v1/hospitais")
 public class HospitalController {
