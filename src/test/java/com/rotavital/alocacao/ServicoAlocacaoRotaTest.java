@@ -140,6 +140,54 @@ class ServicoAlocacaoRotaTest {
     }
 
     @Test
+    void unidadeDeEstoqueQueNaoExisteNaMalhaEhTratadaComoInalcancavel() {
+        // "Deposito" tem bolsa no estoque mas nem vertice na malha: e o caso
+        // de dado desalinhado entre estoque e rede, e cai no mesmo filtro de
+        // alcance - nunca em bolsa escolhida sem rota possivel.
+        Grafo<String> malha = new Grafo<>();
+        malha.inserirAresta("A", "B", 10.0);
+
+        Bolsa foraDaMalha = bolsaComValidade("B001", HOJE.plusDays(1));
+        Bolsa naMalha = bolsaComValidade("B002", HOJE.plusDays(30));
+
+        ServicoAlocacaoRota servico = new ServicoAlocacaoRota(malha, Map.of(
+                "Deposito", List.of(foraDaMalha),
+                "B", List.of(naMalha)));
+
+        ResultadoAlocacao resultado = servico.alocar(
+                "A", GrupoSanguineo.O_NEG, TipoHemocomponente.CONCENTRADO_HEMACIAS, HOJE);
+        assertSame(naMalha, resultado.bolsa());
+
+        ServicoAlocacaoRota soForaDaMalha = new ServicoAlocacaoRota(malha, Map.of(
+                "Deposito", List.of(foraDaMalha)));
+        assertEquals(MotivoFalhaAlocacao.SEM_CAMINHO, soForaDaMalha.alocar(
+                "A", GrupoSanguineo.O_NEG, TipoHemocomponente.CONCENTRADO_HEMACIAS, HOJE).motivo());
+    }
+
+    @Test
+    void codigoDeRastreioDuplicadoResolveNaPrimeiraOcorrenciaDoEstoque() {
+        // Mesmo codigo em duas unidades e erro de dado; a politica documentada
+        // e deterministica: vale a primeira ocorrencia na ordem do estoque.
+        Grafo<String> malha = new Grafo<>();
+        malha.inserirAresta("A", "B", 10.0);
+        malha.inserirAresta("A", "C", 20.0);
+
+        LocalDate mesmaValidade = HOJE.plusDays(7);
+        Map<String, List<Bolsa>> estoque = new LinkedHashMap<>();
+        estoque.put("B", List.of(bolsaComValidade("B001", mesmaValidade)));
+        estoque.put("C", List.of(bolsaComValidade("B001", mesmaValidade)));
+
+        ServicoAlocacaoRota servico = new ServicoAlocacaoRota(malha, estoque);
+
+        for (int chamada = 0; chamada < 10; chamada++) {
+            ResultadoAlocacao resultado = servico.alocar(
+                    "A", GrupoSanguineo.O_NEG, TipoHemocomponente.CONCENTRADO_HEMACIAS, HOJE);
+            assertEquals("B", resultado.unidadeDaBolsa(),
+                    "chamada " + chamada + " nao respeitou a primeira ocorrencia");
+        }
+    }
+
+    @Test
     void construtorRejeitaNulos() {
         Grafo<String> malha = new Grafo<>();
 
