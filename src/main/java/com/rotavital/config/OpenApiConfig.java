@@ -36,6 +36,7 @@ import org.springframework.context.annotation.Configuration;
                         | Bolsas | `/api/v1/bolsas` | Ciclo de vida de cada bolsa de sangue |
                         | Requisições | `/api/v1/requisicoes` | Pedidos hospitalares e alocações |
                         | Rotas | `/api/v1/rotas` | Roteirização de entregas |
+                        | Indicadores | `/api/v1/indicadores` | Métricas operacionais, estatísticas descritivas e cobertura |
 
                         ---
 
@@ -67,7 +68,7 @@ import org.springframework.context.annotation.Configuration;
                           protocolo clínico.
                         - A telemetria de temperatura/GPS é **simulada**.
                         - Em desenvolvimento, o banco é **H2 em memória,** os dados são perdidos
-                          ao reiniciar a aplicação.
+                          al reiniciar a aplicação.
                         """,
                 contact = @Contact(
                         name = "Equipe RSC-3 · CESAR School",
@@ -94,7 +95,8 @@ import org.springframework.context.annotation.Configuration;
                 @Tag(name = "Hospitais", description = "Cadastro de hospitais e consulta das requisições por unidade"),
                 @Tag(name = "Bolsas", description = "Ciclo de vida de bolsas de hemocomponentes: cadastro, consulta e atualização de status (FEFO)"),
                 @Tag(name = "Requisições", description = "Pedidos hospitalares de hemocomponentes, itens e alocações de bolsas compatíveis"),
-                @Tag(name = "Rotas", description = "Roteirização de entregas com controle de cadeia fria e embarque de bolsas")
+                @Tag(name = "Rotas", description = "Roteirização de entregas com controle de cadeia fria e embarque de bolsas"),
+                @Tag(name = "Indicadores", description = "Métricas operacionais, medidas de tendência central, dispersão, descarte e cobertura de demanda")
         }
 )
 public class OpenApiConfig {
