@@ -88,8 +88,6 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 
 #### Histórias implementadas
 
----
-
 **HU-03 — Alocar bolsa priorizando validade (FEFO)**
 
 | | |
@@ -129,8 +127,6 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 #### Issue / Bug tracker
 
 ![Bug tracker](docs/img/bug-tracker.png)
-
-**Screenshots:** _(a preencher — prints do sistema rodando)_
 
 ### Entrega 03
 
