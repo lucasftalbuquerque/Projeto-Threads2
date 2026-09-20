@@ -128,8 +128,6 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 
 #### Issue / Bug tracker
 
-_Adicionar print da tela do GitHub Issues abaixo:_
-
 ![Bug tracker](docs/img/bug-tracker.png)
 
 **Screenshots:** _(a preencher — prints do sistema rodando)_
