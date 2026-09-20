@@ -81,8 +81,58 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 |---|---|
 | **Aplicação no ar** | [rsc3-rotavital.duckdns.org](https://rsc3-rotavital.duckdns.org/api/v1/hemocentros) |
 | Pipeline e deploy | [docs/deploy.md](docs/deploy.md) |
+| Histórias de usuário | [docs/historias-de-usuario.md](docs/historias-de-usuario.md) |
+| Issue / Bug tracker | [github.com/…/issues](https://github.com/rsc3-pixel/Projeto3-2026.2/issues) |
+| Screencast do sistema | _(a adicionar — YouTube)_ |
+| Screencast do código | _(a adicionar — YouTube)_ |
 
-**Screenshots:** _(a preencher)_
+#### Histórias implementadas
+
+---
+
+**HU-03 — Alocar bolsa priorizando validade (FEFO)**
+
+| | |
+|---|---|
+| **Como** | técnico do hemocentro |
+| **Quero** | que o sistema indique qual bolsa separar para cada item da requisição |
+| **Para que** | eu use primeiro a que vence antes e reduza o descarte |
+
+**Critérios de aceite:**
+- Entre bolsas equivalentes, sempre sai a de validade mais próxima
+- Bolsa vencida nunca entra na seleção
+- Empate de validade resolvido de forma determinística
+- Atendimento parcial é registrado, não tratado como falha
+
+**Implementação:** `SelecaoFefo.java` (fila de prioridade FEFO) · `ServicoAlocacaoRota.java` · endpoint `POST /api/v1/requisicoes/{id}/itens/{itemId}/alocacoes`
+
+---
+
+**HU-06 — Acompanhar indicadores da rede**
+
+| | |
+|---|---|
+| **Como** | coordenador da rede |
+| **Quero** | ver estoque, descarte e cobertura de demanda por tipo sanguíneo |
+| **Para que** | eu identifique onde falta sangue antes que vire desabastecimento |
+
+**Critérios de aceite:**
+- Indicadores calculados a partir do estoque real, não valores fixos
+- Tipos com cobertura abaixo de 100% aparecem destacados
+- Painel mostra medidas de dispersão, não só média
+- Cada indicador exibe a unidade e o período considerado
+
+**Implementação:** `IndicadorServico.java` · `IndicadorController.java` · endpoints `GET /api/v1/indicadores/*`
+
+---
+
+#### Issue / Bug tracker
+
+_Adicionar print da tela do GitHub Issues abaixo:_
+
+![Bug tracker](docs/img/bug-tracker.png)
+
+**Screenshots:** _(a preencher — prints do sistema rodando)_
 
 ### Entrega 03
 
