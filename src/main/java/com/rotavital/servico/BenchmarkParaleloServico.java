@@ -13,29 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Orquestra o benchmark de paralelismo da PI3: gera (ou reaproveita) a massa
- * sintetica pedida e mede, em milissegundos, apenas a etapa de calculo -- a
- * geracao da massa fica de fora da medicao de proposito, pelo mesmo motivo
- * que a carga inicial nao entra na medicao de {@code MedicaoDesempenhoTest}
- * (senao mediriamos o gerador de dados, nao o algoritmo de agregacao).
- *
- * <p>A massa e cacheada em memoria por (tamanhoAmostra, semente): chamadas
- * repetidas com os mesmos parametros mas threads diferentes comparam o
- * mesmo conjunto de dados, como pede o roteiro ("as duas versoes devem
- * devolver exatamente a mesma resposta"). Esse cache e deliberadamente
- * simples (um {@code Map} em memoria, sem limite de entradas nem
- * expiracao) -- adequado para o benchmark didatico desta atividade, mas o
- * primeiro ponto a rever se a operacao virar definitiva (ver
- * docs/analise-paralelismo.md, secao "quando 8 threads nao bastam").</p>
- *
- * <p>Dado sintetico, sem qualquer relacao com doador, paciente ou hospital
- * real (LGPD) -- ver {@link GeradorMassaBolsasSintetica}.</p>
- */
 @Service
 public class BenchmarkParaleloServico {
 
-    /** Limite de seguranca para nao esgotar a heap com uma amostra descontrolada. */
     private static final int TAMANHO_MAXIMO_AMOSTRA = 2_000_000;
 
     private final CalculadoraDispersaoValidade calculadora = new CalculadoraDispersaoValidade();

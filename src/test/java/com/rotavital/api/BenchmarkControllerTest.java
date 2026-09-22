@@ -63,9 +63,6 @@ class BenchmarkControllerTest {
                 .andExpect(jsonPath("$.modo").value("PARALELO"))
                 .andExpect(jsonPath("$.threads").value(4));
 
-        // regressao simples: o campo "resultado" (sem o tempoMs, que varia) precisa
-        // ser identico entre as duas chamadas -- ver teste dedicado em
-        // BenchmarkParaleloServicoTest para a comparacao estruturada.
         org.junit.jupiter.api.Assertions.assertTrue(respostaSequencial.contains("\"resultado\""));
     }
 

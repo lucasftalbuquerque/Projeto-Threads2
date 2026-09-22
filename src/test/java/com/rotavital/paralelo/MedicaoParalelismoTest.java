@@ -10,27 +10,6 @@ import java.util.Locale;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Medicao de tempo da atividade de paralelismo: sequencial x 2, 4 e 8
- * threads, para 100 mil e 1 milhao de bolsas sinteticas.
- *
- * <p>Mesma metodologia de {@code MedicaoDesempenhoTest} (PI3-60): {@code
- * System.nanoTime()} por execucao, aquecimento descartado (JIT e caches
- * frios distorcem as primeiras chamadas), media tirada so das execucoes
- * medidas. A massa e gerada uma unica vez por tamanho -- gerar bolsa nao e
- * o que se quer medir aqui, e sim a agregacao estatistica sobre elas -- e
- * o teste falha se sequencial e paralelo divergirem, o sinal de uma race
- * condition que o roteiro pede para verificar.</p>
- *
- * <p>Os numeros saem no log do teste, em CSV, prontos para a tabela e o
- * grafico do relatorio. O teste nao trava por tempo maximo: medir e
- * registrar nao pode virar flakiness de CI por variacao de maquina (mesma
- * decisao de {@code MedicaoDesempenhoTest}). Nota: o tempo aqui e o do
- * calculo em si (nivel de servico); o tempo de resposta do endpoint HTTP
- * completo, pedido no roteiro, inclui tambem a serializacao/dispatch do
- * Spring e deve ser conferido chamando {@code GET
- * /api/v1/benchmark/dispersao-validade} de fato (ver docs/analise-paralelismo.md).</p>
- */
 class MedicaoParalelismoTest {
 
     private static final LocalDate HOJE = LocalDate.now();
@@ -55,8 +34,6 @@ class MedicaoParalelismoTest {
                 ResumoValidade paralelo = medir(tamanho, "PARALELO", threads,
                         () -> calc.calcularParalelo(massa, HOJE, threads));
 
-                // O teste central do roteiro: as duas versoes tem que devolver
-                // exatamente a mesma resposta. Se divergir, ha race condition.
                 assertEquals(sequencial, paralelo,
                         "sequencial e paralelo(" + threads + ") divergiram para tamanho=" + tamanho);
             }

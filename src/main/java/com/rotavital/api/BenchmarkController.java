@@ -13,25 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 
-/**
- * Endpoint de benchmark de paralelismo (PI3): mede o tempo da agregacao
- * estatistica de validade -- a mesma logica de
- * {@code IndicadorServico.dispersaoValidade} (media, mediana, desvio-padrao
- * amostral, minimo e maximo dos dias ate o vencimento) -- comparando a
- * versao sequencial com a versao particionada por threads sobre uma massa
- * sintetica de escala nacional (ex.: 100 mil ou 1 milhao de bolsas).
- *
- * <p>Requisicao chega, o servidor gera/reaproveita a massa e calcula, a
- * resposta volta com o resultado e o tempo medido -- nao e um script
- * solto. Ver {@code docs/analise-paralelismo.md} para a justificativa da
- * escolha desta operacao, a metodologia de medicao e a analise dos
- * resultados.</p>
- *
- * <p>Dado sintetico e didatico: a massa gerada nao tem qualquer relacao com
- * doador, paciente ou hospital real (LGPD), e a compatibilidade/validade
- * seguem apenas a regra didatica do dominio, sem validar protocolo
- * hemoterapico real.</p>
- */
 @Tag(name = "Benchmark", description = "Medicao de desempenho sequencial vs. paralelo (particionamento com threads)")
 @RestController
 @RequestMapping("/api/v1/benchmark")

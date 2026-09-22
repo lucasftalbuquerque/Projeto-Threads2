@@ -16,18 +16,6 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/**
- * Cobre dois riscos distintos:
- *
- * <ol>
- *   <li>as formulas estatisticas em si estao corretas (comparadas a mao,
- *       igual ao criterio ja usado em {@code IndicadorServico});</li>
- *   <li>a versao paralela nao introduz race condition -- ou seja, para
- *       qualquer massa e qualquer numero de threads, o resultado e
- *       byte-a-byte identico ao da versao sequencial. Se algum dia divergir,
- *       o teste falha e aponta exatamente isso.</li>
- * </ol>
- */
 class CalculadoraDispersaoValidadeTest {
 
     private static final LocalDate HOJE = LocalDate.of(2026, 9, 21);
@@ -35,8 +23,6 @@ class CalculadoraDispersaoValidadeTest {
 
     @Test
     void calculaMedidasCorretasParaMassaConhecida() {
-        // dias ate vencer: 10, 20, 30, 40, 50 -> media 30, mediana 30,
-        // desvio-padrao amostral (n-1) = sqrt(1000/4) = 15.811388...
         List<Bolsa> bolsas = List.of(
                 bolsaComDiasAteVencer(10),
                 bolsaComDiasAteVencer(20),
@@ -56,7 +42,6 @@ class CalculadoraDispersaoValidadeTest {
 
     @Test
     void medianaParEMediaDosDoisCentrais() {
-        // dias ate vencer: 10, 20, 30, 40 -> mediana = (20+30)/2 = 25
         List<Bolsa> bolsas = List.of(
                 bolsaComDiasAteVencer(40),
                 bolsaComDiasAteVencer(10),
@@ -105,11 +90,6 @@ class CalculadoraDispersaoValidadeTest {
                 () -> calculadora.calcularParalelo(bolsas, HOJE, 1));
     }
 
-    /**
-     * O teste central da atividade: sequencial e paralelo (2, 4 e 8 threads)
-     * tem que devolver EXATAMENTE a mesma resposta. Roda para varios
-     * tamanhos, incluindo casos onde ha mais threads que elementos.
-     */
     @ParameterizedTest
     @ValueSource(ints = {0, 1, 2, 7, 31, 1000, 50_000})
     void sequencialEParaleloDevolvemExatamenteAMesmaResposta(int tamanho) {
@@ -142,11 +122,7 @@ class CalculadoraDispersaoValidadeTest {
         assertEquals(sequencial, paralelo8);
     }
 
-    // --- Auxiliares de massa de teste ---
-
     private static Bolsa bolsaComDiasAteVencer(int dias) {
-        // PLASMA_FRESCO_CONGELADO tem validade de 365 dias, folga suficiente
-        // para qualquer valor de teste usado aqui.
         TipoHemocomponente tipo = TipoHemocomponente.PLASMA_FRESCO_CONGELADO;
         LocalDate dataColeta = LocalDate.of(2026, 9, 21).minusDays(tipo.getValidadeDias() - dias);
         return new Bolsa("TEST-" + dias + "-" + System.nanoTime(), tipo,

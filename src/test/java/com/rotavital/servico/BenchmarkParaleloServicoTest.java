@@ -1,6 +1,6 @@
 package com.rotavital.servico;
 
-import com.rotavital.api.dto.benchmark.ResultadoBenchmarkResponse;
+import com.rotavital.api.dto.ResultadoBenchmarkResponse;
 import com.rotavital.servico.excecao.OperacaoInvalidaException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
