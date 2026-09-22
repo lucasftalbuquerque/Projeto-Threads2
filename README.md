@@ -83,7 +83,7 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 | Pipeline e deploy | [docs/deploy.md](docs/deploy.md) |
 | Histórias de usuário | [docs/historias-de-usuario.md](docs/historias-de-usuario.md) |
 | Issue / Bug tracker | [github.com/…/issues](https://github.com/rsc3-pixel/Projeto3-2026.2/issues) |
-| Screencast do sistema | _(a adicionar — YouTube)_ |
+| Screencast do sistema | [assistir no YouTube](https://youtu.be/2tbx00ujZmo) |
 | Screencast do código | _(a adicionar — YouTube)_ |
 
 #### Histórias implementadas
