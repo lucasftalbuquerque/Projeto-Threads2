@@ -69,11 +69,9 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 | Análise estatística (CRISP-DM) | [dados/crisp-dm-briefing.md](dados/crisp-dm-briefing.md) |
 | Apresentação do pitch | [apresentacao/pitch-crisp-dm.html](apresentacao/pitch-crisp-dm.html) |
 
-**Screenshots:** _(adicionar imagens do protótipo)_
-
 ### Entrega 02
 
-**Status:** em andamento
+**Status:** entregue em 21/09/2026
 
 **Artefatos**
 
@@ -84,7 +82,7 @@ nuvem; arquitetura de redes e telemetria; trabalho em equipe.
 | Histórias de usuário | [docs/historias-de-usuario.md](docs/historias-de-usuario.md) |
 | Issue / Bug tracker | [github.com/…/issues](https://github.com/rsc3-pixel/Projeto3-2026.2/issues) |
 | Screencast do sistema | [assistir no YouTube](https://youtu.be/2tbx00ujZmo) |
-| Screencast do código | _(a adicionar — YouTube)_ |
+| Screencast do código | [assistir](https://luvaplay.com.br/game/screwcast-codigo.mp4) |
 
 #### Histórias implementadas
 
